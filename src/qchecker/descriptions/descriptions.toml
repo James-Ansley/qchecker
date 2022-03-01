@@ -1,0 +1,100 @@
+UnnecessaryElif = '''
+Looks like you have an unnecessary Elif condition.
+It might be better in this case to just use an Else.
+For example, instead of:
+```python
+if x < 5:
+    # do something
+elif x >= 5:
+    # do something else
+```
+Consider doing this:
+```python
+if x < 5:
+    # do something
+else:
+    # do something else
+```
+
+Or, instead of:
+```python
+if current is None:
+    current = Node()
+elif current is not None:
+    current = current.next
+```
+Consider doing this:
+```python
+if current is None:
+    current = Node()
+else:
+    current = current.next
+```
+'''
+
+IfElseReturnBool = '''
+Looks like you are returning two booleans inside of an If/Else statement.
+It might be better if you just return the If condition or its inverse.
+For example, instead of:
+```python
+if x < 5:
+    return True
+else:
+    return False
+```
+Consider doing this:
+```python
+return x < 5
+```
+
+Or, instead of:
+```python
+if x % 2 == 0:
+    return False
+else:
+    Return True
+```
+Consider doing this:
+```python
+return x % 2 == 1
+```
+'''
+
+IfReturnBool = '''
+Looks like you are returning the result of some conditional check with
+boolean literals.
+It might be better in this case to just return the condition itself.
+For example, instead of:
+```python
+if x < 5:
+    return True
+return False
+```
+Consider doing this:
+```python
+return x < 5
+```
+
+Or, instead of:
+```python
+if x % 2 == 0:
+    return False
+return True
+```
+Consider doing:
+```python
+return x % 2 == 1
+'''
+
+IfElseAssignReturn = ''''''  # ToDo - Add Description
+IfElseAssignBoolReturn = ''''''  # ToDo - Add Description
+IfElseAssignBool = ''''''  # ToDo - Add Description
+EmptyIfBody = ''''''  # ToDo - Add Description
+EmptyElseBody = ''''''  # ToDo - Add Description
+NestedIf = ''''''  # ToDo - Add Description
+ConfusingElse = ''''''  # ToDo - Add Description
+UnnecessaryElse = ''''''  # ToDo - Add Description
+DuplicateIfElseStatement = ''''''  # ToDo - Add Description
+SeveralDuplicateIfElseStatements = ''''''  # ToDo - Add Description
+DuplicateIfElseBody = ''''''  # ToDo - Add Description
+DeclarationAssignmentDivision = ''''''  # ToDo - Add Description
