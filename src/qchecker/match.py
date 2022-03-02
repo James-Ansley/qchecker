@@ -1,4 +1,6 @@
 import textwrap
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 
@@ -32,6 +34,10 @@ class Match:
                 f'{self.text_range})')
 
     def __repr__(self):
-        return (f'"Match({self.id}",'
+        return (f'Match("{self.id}",'
                 f' """{self.description}""",'
                 f' {self.text_range}')
+
+
+def aggregate_match_types(matches: Iterable['Match']) -> Counter[str]:
+    return Counter(match.id for match in matches)

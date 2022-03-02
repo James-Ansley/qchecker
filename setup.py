@@ -28,5 +28,8 @@ setuptools.setup(
     python_requires='>=3.10',
     install_requires=[
         'tomli~=2.0.1',
+        'pylint~=2.12.2',
+        'flake8~=4.0.1',
+        'flake8-json~=21.7.0',
     ]
 )
