@@ -1,5 +1,6 @@
 import json
 
+from qchecker.descriptions import Markup, Description
 from qchecker.match import Match, TextRange
 
 from ._process import _run_subprocess
@@ -21,8 +22,8 @@ def get_pylint_matches(code: str) -> list[Match]:
     """Returns a list of matches detected by pylint"""
     return [
         Match(
-            pl_match['message-id'],
-            pl_match['message'],
+            f"pylint-{pl_match['message-id']}",
+            Description(Markup.plaintext, pl_match['message']),
             TextRange(
                 pl_match['line'],
                 pl_match['column'],

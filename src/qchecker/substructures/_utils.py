@@ -2,6 +2,17 @@ import ast
 from collections.abc import Iterable
 from typing import Type, TypeVar, Tuple
 
+__all__ = [
+    'nodes_of_class',
+    'is_compliment',
+    'compliment_bools',
+    'assign_types',
+    'assigning_to_same_target',
+    'get_assign_target',
+    'dirty_compare',
+    'match_ends',
+]
+
 T = TypeVar('T')
 type_t = Type[T] | Tuple[Type[T], ...]
 
@@ -30,11 +41,16 @@ def dirty_compare(n1: ast.AST | Iterable[ast.AST],
                   n2: ast.AST | Iterable[ast.AST]):
     if isinstance(n1, Iterable) and isinstance(n2, Iterable):
         n1, n2 = list(n1), list(n2)
-        return (len(n1) == len(n2)
-                and all(dirty_compare(n1, n2) for n1, n2 in zip(n1, n2)))
-    return (isinstance(n1, ast.AST)
+        return (
+                len(n1) == len(n2)
+                and all(dirty_compare(n1, n2)
+                        for n1, n2 in zip(n1, n2))
+        )
+    return (
+            isinstance(n1, ast.AST)
             and isinstance(n2, ast.AST)
-            and ast.dump(n1) == ast.dump(n2))
+            and ast.dump(n1) == ast.dump(n2)
+    )
 
 
 def are_compliment_binary_expressions(n1, n2):

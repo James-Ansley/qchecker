@@ -1,16 +1,37 @@
 import abc
 from ast import *
 from collections.abc import Iterable
+from itertools import chain
 
 from qchecker.descriptions import get_description
 from qchecker.match import Match, TextRange
 
-from ._utils import nodes_of_class, is_compliment, compliment_bools, \
-    assign_types, assigning_to_same_target, get_assign_target, dirty_compare, \
-    match_ends
+from ._utils import *
+
+
+__all__ = [
+    'Substructure',
+    'UnnecessaryElif',
+    'IfElseReturnBool',
+    'IfReturnBool',
+    'IfElseAssignReturn',
+    'IfElseAssignBoolReturn',
+    'IfElseAssignBool',
+    'EmptyIfBody',
+    'EmptyElseBody',
+    'NestedIf',
+    'ConfusingElse',
+    'UnnecessaryElse',
+    'DuplicateIfElseStatement',
+    'SeveralDuplicateIfElseStatements',
+    'DuplicateIfElseBody',
+    'DeclarationAssignmentDivision',
+]
 
 
 class Substructure(abc.ABC):
+    subsets: list['Substructure'] = []
+
     @classmethod
     @property
     @abc.abstractmethod
@@ -29,9 +50,16 @@ class Substructure(abc.ABC):
         return get_description(cls.__name__)
 
     @classmethod
+    def match_collides_with_subset(cls, module, match):
+        matches = chain(*(sub_struct.iter_matches(module)
+                          for sub_struct in cls.subsets))
+        return any(submatch.text_range.contains(match.text_range)
+                   for submatch in matches)
+
+    @classmethod
     def match(cls, from_node, to_node):
         return Match(
-            cls.__name__,
+            cls.name,
             cls.description,
             TextRange(
                 from_node.lineno,
@@ -45,6 +73,11 @@ class Substructure(abc.ABC):
     @abc.abstractmethod
     def iter_matches(cls, module: Module) -> Iterable[Match]:
         """Iterates over all matching substructures in the given module"""
+
+    @classmethod
+    def count_matches(cls, module: Module) -> int:
+        """Returns the number of matching substructures in the given module"""
+        return len(list(cls.iter_matches(module)))
 
 
 class UnnecessaryElif(Substructure):
@@ -92,28 +125,6 @@ class IfReturnBool(Substructure):
                     yield cls.match(n1, n2)
 
 
-class IfElseAssignReturn(Substructure):
-    name = "If/Else Assign Return"
-    technical_description = "If(..)[name=..] Else[name=..], Return name"
-
-    @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
-        # ToDo - Make this better
-        for node in nodes_of_class(module, FunctionDef):
-            match node:
-                case FunctionDef(
-                    body=[*_,
-                          If(body=[a1], orelse=[a2]) as n1,
-                          Return(Name() as v1) as n2]
-                ) if (
-                        isinstance(a1, assign_types)
-                        and isinstance(a2, assign_types)
-                        and assigning_to_same_target(a1, a2)
-                        and [a.id for a in get_assign_target(a1)] == [v1.id]
-                ):
-                    yield cls.match(n1, n2)
-
-
 class IfElseAssignBoolReturn(Substructure):
     name = "If/Else Assign Bool Return"
     technical_description = "If(..)[name=bool] Else[name=!bool], Return name"
@@ -137,9 +148,34 @@ class IfElseAssignBoolReturn(Substructure):
                     yield cls.match(n1, n2)
 
 
+class IfElseAssignReturn(Substructure):
+    name = "If/Else Assign Return"
+    technical_description = "If(..)[name=..] Else[name=..], Return name"
+    subsets = [IfElseAssignBoolReturn]
+
+    @classmethod
+    def iter_matches(cls, module: Module) -> Iterable[Match]:
+        for node in nodes_of_class(module, FunctionDef):
+            match node:
+                case FunctionDef(
+                    body=[*_,
+                          If(body=[a1], orelse=[a2]) as n1,
+                          Return(Name() as v1) as n2]
+                ) if (
+                        isinstance(a1, assign_types)
+                        and isinstance(a2, assign_types)
+                        and assigning_to_same_target(a1, a2)
+                        and [a.id for a in get_assign_target(a1)] == [v1.id]
+                ):
+                    match = cls.match(n1, n2)
+                    if not cls.match_collides_with_subset(module, match):
+                        yield match
+
+
 class IfElseAssignBool(Substructure):
     name = "If/Else Assign Bool"
     technical_description = "If(..)[name=bool] Else[name=!bool]"
+    subsets = [IfElseAssignBoolReturn]
 
     @classmethod
     def iter_matches(cls, module: Module) -> Iterable[Match]:
@@ -152,7 +188,9 @@ class IfElseAssignBool(Substructure):
                         compliment_bools(b1, b2)
                         and dirty_compare(t1, t2)
                 ):
-                    yield cls.match(node, node)
+                    match = cls.match(node, node)
+                    if not cls.match_collides_with_subset(module, match):
+                        yield match
 
 
 class EmptyIfBody(Substructure):
@@ -226,9 +264,13 @@ class DuplicateIfElseStatement(Substructure):
         for node in nodes_of_class(module, If):
             match node:
                 case If(
-                    body=[*_, _, s1],
-                    orelse=[*_, _, s2]
-                ) if dirty_compare(s1, s2):
+                    body=b1, orelse=b2
+                ) if (
+                        match_ends(b1, b2) == 1
+                        and len(b1) > 1
+                        and len(b2) > 1
+                        and not dirty_compare(b1, b2)
+                ):
                     yield cls.match(node, node)
 
 
@@ -240,7 +282,12 @@ class SeveralDuplicateIfElseStatements(Substructure):
     def iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(body=b1, orelse=b2) if match_ends(b1, b2) > 1:
+                case If(
+                    body=b1, orelse=b2
+                ) if (
+                        match_ends(b1, b2) > 1
+                        and not dirty_compare(b1, b2)
+                ):
                     yield cls.match(node, node)
 
 
@@ -262,18 +309,6 @@ class DeclarationAssignmentDivision(Substructure):
 
     @classmethod
     def iter_matches(cls, module: Module) -> Iterable[Match]:
-        # ToDo - Make this better
-        declared_names = set()
-        for ann_assign in nodes_of_class(module, AnnAssign):
-            if ann_assign.simple == 1 and isinstance(ann_assign.target, Name):
-                declared_names.add(ann_assign.target.id)
-        for name in nodes_of_class(module, Name):
-            if name.id in declared_names and isinstance(name.ctx, Store):
-                yield cls.match(name, name)
-
-
-# ToDo – One of these days the API will be stable! I'm sure of it
-__all__ = [
-    'Substructure',
-    *(cls.__name__ for cls in Substructure.__subclasses__())
-]
+        yield from (cls.match(assign, assign)
+                    for assign in nodes_of_class(module, AnnAssign)
+                    if assign.simple == 1)

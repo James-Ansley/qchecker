@@ -3,6 +3,8 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from qchecker.descriptions import Description
+
 
 @dataclass
 class TextRange:
@@ -17,6 +19,13 @@ class TextRange:
         if self.to_offset is None:
             self.to_offset = self.from_offset
 
+    def contains(self, other: 'TextRange'):
+        this_from = (self.from_line, self.from_offset)
+        other_from = (other.from_line, other.from_offset)
+        this_to = (self.to_line, self.to_offset)
+        other_to = (other.to_line, other.to_offset)
+        return this_from <= other_from and this_to >= other_to
+
     def __repr__(self):
         return f"TextRange({self.from_line},{self.from_offset}" \
                f"->{self.to_line},{self.to_offset})"
@@ -25,18 +34,18 @@ class TextRange:
 @dataclass(frozen=True)
 class Match:
     id: str
-    description: str
+    description: Description
     text_range: 'TextRange'
 
     def __str__(self):
         return (f'Match("{self.id}", '
-                f'"{textwrap.shorten(self.description, 40)}", '
+                f'"{textwrap.shorten(self.description.content, 40)}", '
                 f'{self.text_range})')
 
     def __repr__(self):
-        return (f'Match("{self.id}",'
-                f' """{self.description}""",'
-                f' {self.text_range}')
+        return (f'Match("{self.id}", '
+                f'{repr(self.description)}, '
+                f'{self.text_range}')
 
 
 def aggregate_match_types(matches: Iterable['Match']) -> Counter[str]:

@@ -1,4 +1,6 @@
-UnnecessaryElif = '''
+[UnnecessaryElif]
+markup = 'markdown'
+content = '''
 Looks like you have an unnecessary Elif condition.
 It might be better in this case to just use an Else.
 For example, instead of:
@@ -32,7 +34,9 @@ else:
 ```
 '''
 
-IfElseReturnBool = '''
+[IfElseReturnBool]
+markup = 'markdown'
+content = '''
 Looks like you are returning two booleans inside of an If/Else statement.
 It might be better if you just return the If condition or its inverse.
 For example, instead of:
@@ -60,7 +64,9 @@ return x % 2 == 1
 ```
 '''
 
-IfReturnBool = '''
+[IfReturnBool]
+markup = 'markdown'
+content = '''
 Looks like you are returning the result of some conditional check with
 boolean literals.
 It might be better in this case to just return the condition itself.
@@ -86,15 +92,50 @@ Consider doing:
 return x % 2 == 1
 '''
 
-IfElseAssignReturn = ''''''  # ToDo - Add Description
-IfElseAssignBoolReturn = ''''''  # ToDo - Add Description
-IfElseAssignBool = ''''''  # ToDo - Add Description
-EmptyIfBody = ''''''  # ToDo - Add Description
-EmptyElseBody = ''''''  # ToDo - Add Description
-NestedIf = ''''''  # ToDo - Add Description
-ConfusingElse = ''''''  # ToDo - Add Description
-UnnecessaryElse = ''''''  # ToDo - Add Description
-DuplicateIfElseStatement = ''''''  # ToDo - Add Description
-SeveralDuplicateIfElseStatements = ''''''  # ToDo - Add Description
-DuplicateIfElseBody = ''''''  # ToDo - Add Description
-DeclarationAssignmentDivision = ''''''  # ToDo - Add Description
+[IfElseAssignReturn]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[IfElseAssignBoolReturn]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[IfElseAssignBool]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[EmptyIfBody]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[EmptyElseBody]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[NestedIf]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[ConfusingElse]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[UnnecessaryElse]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[DuplicateIfElseStatement]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[SeveralDuplicateIfElseStatements]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[DuplicateIfElseBody]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[DeclarationAssignmentDivision]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description

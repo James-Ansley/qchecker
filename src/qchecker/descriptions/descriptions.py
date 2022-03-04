@@ -1,10 +1,35 @@
+import textwrap
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import BinaryIO
 
 import tomli
 
 _DEFAULT_PATH = Path(__file__).parent.resolve() / 'descriptions.toml'
-_DESCRIPTIONS: list[dict[str, str]] = []
+_DESCRIPTIONS: list[dict[str, 'Description']] = []
+
+
+class Markup(Enum):
+    markdown = 'markdown'
+    plaintext = 'plaintext'
+
+
+@dataclass
+class Description:
+    markup: Markup | str
+    content: str
+
+    def __post_init__(self):
+        if isinstance(self.markup, str):
+            self.markup = Markup[self.markup]
+
+    def __str__(self):
+        return f'Description({self.markup}, ' \
+               f'"{textwrap.shorten(self.content, 40)}")'
+
+    def __repr__(self):
+        return f'Description({self.markup}, "{self.content}")'
 
 
 def _set_default():
@@ -13,7 +38,7 @@ def _set_default():
         append_description_from_toml(f)
 
 
-def append_descriptions(descriptions: dict[str, str]) -> None:
+def append_descriptions(descriptions: dict[str, 'Description']) -> None:
     """
     Adds a path to a TOML file containing pattern descriptions which can then
     be retrieved from the `get_descriptions` function. Paths are searched in
@@ -25,7 +50,7 @@ def append_descriptions(descriptions: dict[str, str]) -> None:
     _DESCRIPTIONS.append(descriptions)
 
 
-def set_descriptions(*descriptions: dict[str, str]) -> None:
+def set_descriptions(*descriptions: dict[str, 'Description']) -> None:
     """
     Sets the TOML description paths. Overwrites previously specified and
     default descriptions
@@ -44,10 +69,12 @@ def append_description_from_toml(f: BinaryIO) -> None:
     :param f: the TOML BytesIO
     """
     data = tomli.load(f)
-    _DESCRIPTIONS.append(data)
+    descriptions = {name: Description(**values)
+                    for name, values in data.items()}
+    _DESCRIPTIONS.append(descriptions)
 
 
-def get_description(description_name: str) -> str:
+def get_description(description_name: str) -> Description:
     """
     Retrieves a description from the set description paths. Searches through
     each set description path in the order they have been added. Retrieves
