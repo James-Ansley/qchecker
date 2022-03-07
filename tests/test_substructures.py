@@ -175,6 +175,16 @@ def my_function(x):
 
 my_function(10)
 """)
+duplicate_expression = ast.parse("""
+def my_function(x):
+    for i in range(len(x) // 2):
+        if x[i * 2] <= x[i]:
+            return x[i * 2] <= x[i]
+
+
+my_function([0, 1, 2, 3, 4, 5])
+""")
+
 
 minimal_cases = [
     unnecessary_elif,
@@ -193,6 +203,7 @@ minimal_cases = [
     duplicate_if_else_body,
     declaration_assignment_division,
     augementable_assignment,
+    duplicate_expression,
 ]
 
 
@@ -301,8 +312,15 @@ def test_augementable_assignment():
     assert match.text_range == TextRange(3, 4, 3, 13)
 
 
+def test_duplicate_expression():
+    match = get_single_match(DuplicateExpression, duplicate_expression)
+    assert match.id == 'Duplicate Expression'
+    assert match.text_range == TextRange(4, 11, 4, 27)
+
+
 @pytest.mark.parametrize('substructure', SUBSTRUCTURES)
 def test_basic_match_is_exclusive(substructure):
+    """Substructures should match exactly one minimal case each"""
     num_matches = sum(substructure.count_matches(module)
                       for module in minimal_cases)
     assert num_matches == 1
@@ -310,5 +328,6 @@ def test_basic_match_is_exclusive(substructure):
 
 @pytest.mark.parametrize('substructure', SUBSTRUCTURES)
 def test_empty(substructure):
+    """Substructures should not match empty modules"""
     empty = ast.parse('')
     assert substructure.count_matches(empty) == 0
