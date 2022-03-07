@@ -4,6 +4,7 @@ import pytest
 from qchecker.match import TextRange
 from qchecker.substructures import *
 
+# A set of minimal cases that should each match exactly one substructure
 unnecessary_elif = ast.parse("""
 def my_function(x):
     if x > 5:
@@ -166,8 +167,16 @@ def my_function(x):
 
 my_function(10)
 """)
+augementable_assignment = ast.parse("""
+def my_function(x):
+    x = x + 1
+    return x
+            
 
-basic_modules = [
+my_function(10)
+""")
+
+minimal_cases = [
     unnecessary_elif,
     if_else_return_bool,
     if_return_bool,
@@ -183,6 +192,7 @@ basic_modules = [
     several_duplicate_if_else_statements,
     duplicate_if_else_body,
     declaration_assignment_division,
+    augementable_assignment,
 ]
 
 
@@ -285,10 +295,16 @@ def test_declaration_assignment_division():
     assert match.text_range == TextRange(3, 4, 3, 10)
 
 
+def test_augementable_assignment():
+    match = get_single_match(AugmentableAssignment, augementable_assignment)
+    assert match.id == 'Augmentable Assignment'
+    assert match.text_range == TextRange(3, 4, 3, 13)
+
+
 @pytest.mark.parametrize('substructure', SUBSTRUCTURES)
 def test_basic_match_is_exclusive(substructure):
     num_matches = sum(substructure.count_matches(module)
-                      for module in basic_modules)
+                      for module in minimal_cases)
     assert num_matches == 1
 
 

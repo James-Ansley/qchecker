@@ -8,7 +8,6 @@ from qchecker.match import Match, TextRange
 
 from ._utils import *
 
-
 __all__ = [
     'Substructure',
     'UnnecessaryElif',
@@ -26,6 +25,8 @@ __all__ = [
     'SeveralDuplicateIfElseStatements',
     'DuplicateIfElseBody',
     'DeclarationAssignmentDivision',
+    'AugmentableAssignment',
+    'DuplicateExpression',
 ]
 
 
@@ -88,7 +89,9 @@ class UnnecessaryElif(Substructure):
     def iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(test=t1, orelse=[If(test=t2)]) if is_compliment(t1, t2):
+                case If(
+                    test=t1, orelse=[If(test=t2)]
+                ) if are_compliment_operations(t1, t2):
                     yield cls.match(node, node)
 
 
@@ -103,7 +106,7 @@ class IfElseReturnBool(Substructure):
                 case If(
                     body=[Return(Constant(r1))],
                     orelse=[Return(Constant(r2))]
-                ) if compliment_bools(r1, r2):
+                ) if are_compliment_bools(r1, r2):
                     yield cls.match(node, node)
 
 
@@ -121,7 +124,7 @@ class IfReturnBool(Substructure):
                         If(body=[Return(Constant(v1))]) as n1,
                         Return(Constant(v2)) as n2,
                     ]
-                ) if compliment_bools(v1, v2):
+                ) if are_compliment_bools(v1, v2):
                     yield cls.match(n1, n2)
 
 
@@ -141,7 +144,7 @@ class IfElseAssignBoolReturn(Substructure):
                         Return(Name(t3)) as n2
                     ]
                 ) if (
-                        compliment_bools(b1, b2)
+                        are_compliment_bools(b1, b2)
                         and dirty_compare(t1, t2)
                         and t1.id == t3
                 ):
@@ -158,16 +161,24 @@ class IfElseAssignReturn(Substructure):
         for node in nodes_of_class(module, FunctionDef):
             match node:
                 case FunctionDef(
-                    body=[*_,
-                          If(body=[a1], orelse=[a2]) as n1,
-                          Return(Name() as v1) as n2]
-                ) if (
-                        isinstance(a1, assign_types)
-                        and isinstance(a2, assign_types)
-                        and assigning_to_same_target(a1, a2)
-                        and [a.id for a in get_assign_target(a1)] == [v1.id]
-                ):
-                    match = cls.match(n1, n2)
+                    body=[
+                        *_,
+                        If(
+                            body=[
+                                Assign(targets=[Name(id=n1)])
+                                | AnnAssign(target=Name(id=n1))
+                                | AugAssign(target=Name(id=n1))
+                            ],
+                            orelse=[
+                                Assign(targets=[Name(id=n2)])
+                                | AnnAssign(target=Name(id=n2))
+                                | AugAssign(target=Name(id=n2))
+                            ],
+                        ) as node1,
+                        Return(Name(id=n3)) as node2,
+                    ]
+                ) if n1 == n2 == n3:
+                    match = cls.match(node1, node2)
                     if not cls.match_collides_with_subset(module, match):
                         yield match
 
@@ -185,7 +196,7 @@ class IfElseAssignBool(Substructure):
                     body=[Assign([t1], Constant(b1))],
                     orelse=[Assign([t2], Constant(b2))]
                 ) if (
-                        compliment_bools(b1, b2)
+                        are_compliment_bools(b1, b2)
                         and dirty_compare(t1, t2)
                 ):
                     match = cls.match(node, node)
@@ -305,10 +316,60 @@ class DuplicateIfElseBody(Substructure):
 
 class DeclarationAssignmentDivision(Substructure):
     name = "Declaration/Assignment Division"
-    technical_description = "name: type, name=.."
+    technical_description = "name: type"
 
     @classmethod
     def iter_matches(cls, module: Module) -> Iterable[Match]:
         yield from (cls.match(assign, assign)
                     for assign in nodes_of_class(module, AnnAssign)
                     if assign.simple == 1)
+
+
+class AugmentableAssignment(Substructure):
+    name = "Augmentable Assignment"
+    technical_description = "name = name Op() .. | .. [+*] name"
+
+    @classmethod
+    def iter_matches(cls, module: Module) -> Iterable[Match]:
+        for node in nodes_of_class(module, Assign):
+            match node:
+                case Assign(
+                    targets=[Name(id=n1)],
+                    value=BinOp(left=Name(id=n2)),
+                ) if n1 == n2:
+                    yield cls.match(node, node)
+                case Assign(
+                    targets=[Name(id=n1)],
+                    value=BinOp(
+                        # ToDo - Check for other commutative ops
+                        op=Add() | Mult(),
+                        right=Name(id=n2)
+                    )
+                ) if n1 == n2:
+                    yield cls.match(node, node)
+
+
+class DuplicateExpression(Substructure):
+    name = "Duplicate Expression"
+    # ToDo – Clarify Effenberger2022Code definition. It is not clear if they
+    #  are using the term expression formally or colloquially or whether they
+    #  account for control flow
+    technical_description = (
+        "Module contains two expressions with more than 8 names, literals, "
+        "or operators. Operators count for two tokens."
+    )
+
+    @classmethod
+    def iter_matches(cls, module: Module) -> Iterable[Match]:
+        # ToDo - consider using something like leoAst.py. Would require a
+        #  large refactor. http://leoeditor.com/appendices.html#leoast-py
+        expressions = nodes_of_class(module, expr)
+        expressions = [n for n in expressions if weight_of(n) >= 8]
+        duplicates = set()
+        for i in range(len(expressions)):
+            for j in range(i + 1, len(expressions)):
+                if (expressions[j] not in duplicates
+                        and dirty_compare(expressions[i], expressions[j])):
+                    duplicates.add(expressions[i])
+                    break
+        yield from (cls.match(exp, exp) for exp in duplicates)

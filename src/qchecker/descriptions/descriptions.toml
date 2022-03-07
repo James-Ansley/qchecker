@@ -139,3 +139,11 @@ content = ''''''  # ToDo - Add Description
 [DeclarationAssignmentDivision]
 markup = 'markdown'
 content = ''''''  # ToDo - Add Description
+
+[AugmentableAssignment]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[DuplicateExpression]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
