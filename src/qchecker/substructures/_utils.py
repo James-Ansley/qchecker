@@ -6,8 +6,10 @@ __all__ = [
     'dirty_compare',
     'match_ends',
     'are_compliment_operations',
+    'are_compliment_operators',
     'are_compliment_bools',
     'weight_of',
+    'are_complimentary_unary_expressions'
 ]
 
 _COMPLIMENT_OPS = {
@@ -98,11 +100,11 @@ def are_complimentary_unary_expressions(n1, n2):
     match (n1, n2):
         case (
             cond1,
-            ast.UnaryOp(op=ast.Not() | ast.UAdd(), operand=cond2),
+            ast.UnaryOp(op=ast.Not() | ast.USub(), operand=cond2),
         ) if dirty_compare(cond1, cond2):
             return True
         case (
-            ast.UnaryOp(op=ast.Not() | ast.UAdd(), operand=cond1),
+            ast.UnaryOp(op=ast.Not() | ast.USub(), operand=cond1),
             cond2,
         ) if dirty_compare(cond1, cond2):
             return True
@@ -152,6 +154,7 @@ def are_compliment_bools(v1, v2):
 
 
 def weight_of(node):
+    # ToDo – Clarify effenberger2022code definition. What do they mean by token?
     weight = 2 * len(list(nodes_of_class(node, _DOUBLE_WEIGHTED_NODES)))
     weight += len(list(nodes_of_class(node, _SINGLE_WEIGHTED_NODES)))
     return weight
