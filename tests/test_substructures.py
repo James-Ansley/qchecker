@@ -175,16 +175,15 @@ def my_function(x):
 
 my_function(10)
 """)
-duplicate_expression = ast.parse("""
+missed_absolute_value = ast.parse("""
 def my_function(x):
-    for i in range(len(x) // 2):
-        if x[i * 2] <= x[i]:
-            return x[i * 2] <= x[i]
+    if x < 5 and x > -5:
+        print('Small')
+    print('Large')
+            
 
-
-my_function([0, 1, 2, 3, 4, 5])
+my_function(10)
 """)
-
 
 minimal_cases = [
     unnecessary_elif,
@@ -203,8 +202,19 @@ minimal_cases = [
     duplicate_if_else_body,
     declaration_assignment_division,
     augementable_assignment,
-    duplicate_expression,
+    missed_absolute_value,
 ]
+
+# Minimal case produces two matches
+duplicate_expression = ast.parse("""
+def my_function(x):
+    for i in range(len(x) // 2):
+        if x[i * 2] <= x[i]:
+            return x[i * 2] <= x[i]
+
+
+my_function([0, 1, 2, 3, 4, 5])
+""")
 
 
 def get_single_match(substructure, module):
@@ -313,12 +323,23 @@ def test_augementable_assignment():
 
 
 def test_duplicate_expression():
-    match = get_single_match(DuplicateExpression, duplicate_expression)
-    assert match.id == 'Duplicate Expression'
-    assert match.text_range == TextRange(4, 11, 4, 27)
+    match1, match2 = DuplicateExpression.iter_matches(duplicate_expression)
+    assert match1.id == 'Duplicate Expression'
+    assert match1.text_range == TextRange(4, 11, 4, 27)
+    assert match2.id == 'Duplicate Expression'
+    assert match2.text_range == TextRange(5, 19, 5, 35)
 
 
-@pytest.mark.parametrize('substructure', SUBSTRUCTURES)
+def test_missed_absolute_value():
+    match = get_single_match(MissedAbsoluteValue, missed_absolute_value)
+    assert match.id == 'Missed Absolute Value'
+    assert match.text_range == TextRange(3, 7, 3, 23)
+
+
+@pytest.mark.parametrize(
+    'substructure',
+    [s for s in SUBSTRUCTURES if s != DuplicateExpression]
+)
 def test_basic_match_is_exclusive(substructure):
     """Substructures should match exactly one minimal case each"""
     num_matches = sum(substructure.count_matches(module)

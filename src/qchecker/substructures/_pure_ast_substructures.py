@@ -27,6 +27,7 @@ __all__ = [
     'DeclarationAssignmentDivision',
     'AugmentableAssignment',
     'DuplicateExpression',
+    'MissedAbsoluteValue'
 ]
 
 
@@ -351,7 +352,7 @@ class AugmentableAssignment(Substructure):
 
 class DuplicateExpression(Substructure):
     name = "Duplicate Expression"
-    # ToDo – Clarify Effenberger2022Code definition. It is not clear if they
+    # ToDo – Clarify effenberger2022code definition. It is not clear if they
     #  are using the term expression formally or colloquially or whether they
     #  account for control flow
     technical_description = (
@@ -361,15 +362,40 @@ class DuplicateExpression(Substructure):
 
     @classmethod
     def iter_matches(cls, module: Module) -> Iterable[Match]:
-        # ToDo - consider using something like leoAst.py. Would require a
-        #  large refactor. http://leoeditor.com/appendices.html#leoast-py
+        # ToDo - consider using something like leoAst.py.
+        #  http://leoeditor.com/appendices.html#leoast-py
         expressions = nodes_of_class(module, expr)
         expressions = [n for n in expressions if weight_of(n) >= 8]
-        duplicates = set()
         for i in range(len(expressions)):
             for j in range(i + 1, len(expressions)):
-                if (expressions[j] not in duplicates
-                        and dirty_compare(expressions[i], expressions[j])):
-                    duplicates.add(expressions[i])
-                    break
-        yield from (cls.match(exp, exp) for exp in duplicates)
+                if dirty_compare(expressions[i], expressions[j]):
+                    yield cls.match(expressions[i], expressions[i])
+                    yield cls.match(expressions[j], expressions[j])
+
+
+class MissedAbsoluteValue(Substructure):
+    name = 'Missed Absolute Value'
+    technical_description = ('x < val and x > -val '
+                             '| x == val or x == -val '
+                             '| x <= val and x >= -val')
+
+    _inequalities = (Gt, Lt), (Lt, Gt), (GtE, LtE), (LtE, GtE), (NotEq, NotEq)
+
+    @classmethod
+    def iter_matches(cls, module: Module) -> Iterable[Match]:
+        for node in nodes_of_class(module, BoolOp):
+            match node:
+                case BoolOp(
+                    op=op,
+                    values=[
+                        Compare(left=Name(id=n1), ops=[op1], comparators=[v1]),
+                        Compare(left=Name(id=n2), ops=[op2], comparators=[v2]),
+                    ]
+                ) if (n1 == n2
+                      and ((isinstance(op, And)
+                            and (type(op1), type(op2) in cls._inequalities))
+                           or (isinstance(op, Or)
+                               and isinstance(op1, Eq)
+                               and isinstance(op2, Eq)))
+                      and are_complimentary_unary_expressions(v1, v2)):
+                    yield cls.match(node, node)
