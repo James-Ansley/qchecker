@@ -64,9 +64,10 @@ def set_descriptions(*descriptions: dict[str, 'Description']) -> None:
 
 def append_description_from_toml(f: BinaryIO) -> None:
     """
-    Loads TOML data from a BytesIO stream and appends to the descriptions list.
+    Loads TOML data from a  BinaryIO stream and appends to the descriptions
+    list.
 
-    :param f: the TOML BytesIO
+    :param f: the TOML BinaryIO
     """
     data = tomli.load(f)
     descriptions = {name: Description(**values)
