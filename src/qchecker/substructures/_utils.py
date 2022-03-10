@@ -1,4 +1,5 @@
 import ast
+import re
 from collections.abc import Iterable
 
 __all__ = [
@@ -9,7 +10,8 @@ __all__ = [
     'are_compliment_operators',
     'are_compliment_bools',
     'weight_of',
-    'are_complimentary_unary_expressions'
+    'are_complimentary_unary_expressions',
+    'is_repeated_add',
 ]
 
 _COMPLIMENT_OPS = {
@@ -158,3 +160,8 @@ def weight_of(node):
     weight = 2 * len(list(nodes_of_class(node, _DOUBLE_WEIGHTED_NODES)))
     weight += len(list(nodes_of_class(node, _SINGLE_WEIGHTED_NODES)))
     return weight
+
+
+def is_repeated_add(node: ast.BinOp):
+    code = ast.unparse(node)
+    return re.search(r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \+ \1)+', code) is not None

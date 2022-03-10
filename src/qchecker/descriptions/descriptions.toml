@@ -151,3 +151,7 @@ content = ''''''  # ToDo - Add Description
 [MissedAbsoluteValue]
 markup = 'markdown'
 content = ''''''  # ToDo - Add Description
+
+[RepeatedAddition]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description

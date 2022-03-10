@@ -1,3 +1,2 @@
-from qchecker.substructures._pure_ast_substructures import *
-
-SUBSTRUCTURES = Substructure.__subclasses__()
+from ._ast_substructures import *
+from ._cst_substructures import *

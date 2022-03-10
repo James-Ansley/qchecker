@@ -29,6 +29,11 @@ def get_flake8_matches(code: str) -> list[Match]:
         Match(
             f"flake8-{f8_match['code']}",
             Description(Markup.plaintext, f8_match['text']),
-            TextRange(f8_match['line_number'], f8_match['column_number']),
+            TextRange(
+                f8_match['line_number'],
+                f8_match['column_number'],
+                f8_match['line_number'],
+                f8_match['column_number'],
+            ),
         ) for f8_match in _run_flake8(code)
     ]

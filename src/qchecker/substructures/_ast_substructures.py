@@ -3,13 +3,12 @@ from ast import *
 from collections.abc import Iterable
 from itertools import chain
 
-from qchecker.descriptions import get_description
 from qchecker.match import Match, TextRange
+from qchecker.substructures._base import Substructure
 
 from ._utils import *
 
 __all__ = [
-    'Substructure',
     'UnnecessaryElif',
     'IfElseReturnBool',
     'IfReturnBool',
@@ -19,7 +18,6 @@ __all__ = [
     'EmptyIfBody',
     'EmptyElseBody',
     'NestedIf',
-    'ConfusingElse',
     'UnnecessaryElse',
     'DuplicateIfElseStatement',
     'SeveralDuplicateIfElseStatements',
@@ -27,29 +25,23 @@ __all__ = [
     'DeclarationAssignmentDivision',
     'AugmentableAssignment',
     'DuplicateExpression',
-    'MissedAbsoluteValue'
+    'MissedAbsoluteValue',
+    'RepeatedAddition',
 ]
 
 
-class Substructure(abc.ABC):
-    subsets: list['Substructure'] = []
+class ASTSubstructure(Substructure, abc.ABC):
+    @classmethod
+    def iter_matches(cls, code: str) -> Iterable[Match]:
+        # All problems in computer science
+        # can be solved by another level of indirection.
+        module = parse(code)
+        yield from cls._iter_matches(module)
 
     @classmethod
-    @property
     @abc.abstractmethod
-    def name(cls) -> str:
-        """Name of the substructure"""
-
-    @classmethod
-    @property
-    @abc.abstractmethod
-    def technical_description(cls) -> str:
-        """Compact description of the substructure as it is detected"""
-
-    @classmethod
-    @property
-    def description(cls):
-        return get_description(cls.__name__)
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
+        """Iterates over matches found in the AST"""
 
     @classmethod
     def match_collides_with_subset(cls, module, match):
@@ -59,7 +51,7 @@ class Substructure(abc.ABC):
                    for submatch in matches)
 
     @classmethod
-    def match(cls, from_node, to_node):
+    def _make_match(cls, from_node, to_node):
         return Match(
             cls.name,
             cls.description,
@@ -71,52 +63,45 @@ class Substructure(abc.ABC):
             ),
         )
 
-    @classmethod
-    @abc.abstractmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
-        """Iterates over all matching substructures in the given module"""
 
-    @classmethod
-    def count_matches(cls, module: Module) -> int:
-        """Returns the number of matching substructures in the given module"""
-        return len(list(cls.iter_matches(module)))
-
-
-class UnnecessaryElif(Substructure):
+class UnnecessaryElif(ASTSubstructure):
     name = "Unnecessary Elif"
     technical_description = "If(cond)[..] Elif(!cond)[..]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(
                     test=t1, orelse=[If(test=t2)]
-                ) if are_compliment_operations(t1, t2):
-                    yield cls.match(node, node)
+                ) if (
+                    are_compliment_operations(t1, t2)
+                ):
+                    yield cls._make_match(node, node)
 
 
-class IfElseReturnBool(Substructure):
+class IfElseReturnBool(ASTSubstructure):
+    # Covered by pylint-R1703
     name = "If/Else Return Bool"
     technical_description = "If(..)[Return bool] Else[Return !bool]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(
                     body=[Return(Constant(r1))],
                     orelse=[Return(Constant(r2))]
                 ) if are_compliment_bools(r1, r2):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
 
 
-class IfReturnBool(Substructure):
+class IfReturnBool(ASTSubstructure):
     name = "If Return Bool"
     technical_description = "If(..)[Return bool], Return !bool"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, FunctionDef):
             match node:
                 case FunctionDef(
@@ -126,15 +111,15 @@ class IfReturnBool(Substructure):
                         Return(Constant(v2)) as n2,
                     ]
                 ) if are_compliment_bools(v1, v2):
-                    yield cls.match(n1, n2)
+                    yield cls._make_match(n1, n2)
 
 
-class IfElseAssignBoolReturn(Substructure):
+class IfElseAssignBoolReturn(ASTSubstructure):
     name = "If/Else Assign Bool Return"
     technical_description = "If(..)[name=bool] Else[name=!bool], Return name"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, FunctionDef):
             match node:
                 case FunctionDef(
@@ -149,16 +134,16 @@ class IfElseAssignBoolReturn(Substructure):
                         and dirty_compare(t1, t2)
                         and t1.id == t3
                 ):
-                    yield cls.match(n1, n2)
+                    yield cls._make_match(n1, n2)
 
 
-class IfElseAssignReturn(Substructure):
+class IfElseAssignReturn(ASTSubstructure):
     name = "If/Else Assign Return"
     technical_description = "If(..)[name=..] Else[name=..], Return name"
     subsets = [IfElseAssignBoolReturn]
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, FunctionDef):
             match node:
                 case FunctionDef(
@@ -179,18 +164,18 @@ class IfElseAssignReturn(Substructure):
                         Return(Name(id=n3)) as node2,
                     ]
                 ) if n1 == n2 == n3:
-                    match = cls.match(node1, node2)
+                    match = cls._make_match(node1, node2)
                     if not cls.match_collides_with_subset(module, match):
                         yield match
 
 
-class IfElseAssignBool(Substructure):
+class IfElseAssignBool(ASTSubstructure):
     name = "If/Else Assign Bool"
     technical_description = "If(..)[name=bool] Else[name=!bool]"
     subsets = [IfElseAssignBoolReturn]
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(
@@ -200,79 +185,73 @@ class IfElseAssignBool(Substructure):
                         are_compliment_bools(b1, b2)
                         and dirty_compare(t1, t2)
                 ):
-                    match = cls.match(node, node)
+                    match = cls._make_match(node, node)
                     if not cls.match_collides_with_subset(module, match):
                         yield match
 
 
-class EmptyIfBody(Substructure):
+class EmptyIfBody(ASTSubstructure):
     name = "Empty If Body"
     technical_description = "If(..)[Pass|Constant|name=name]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                # ToDo - Check name=name
-                case If(body=[Expr(Constant()) | Pass()]):
-                    yield cls.match(node, node)
+                case If(body=[Expr(Constant()) | Pass() as body]):
+                    yield cls._make_match(node, body)
+                case If(body=[
+                    Assign(targets=[Name(id=n1)], value=Name(id=n2)) as body
+                ]) if n1 == n2:
+                    yield cls._make_match(node, body)
 
 
-class EmptyElseBody(Substructure):
+class EmptyElseBody(ASTSubstructure):
     name = "Empty Else Body"
     technical_description = "If(..)[..] Else[Pass|Constant|name=name]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                # ToDo - Check name=name
                 case If(orelse=[Expr(Constant()) | Pass()]):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
+                case If(orelse=[
+                    Assign(targets=[Name(id=n1)], value=Name(id=n2))
+                ]) if n1 == n2:
+                    yield cls._make_match(node, node)
 
 
-class NestedIf(Substructure):
+class NestedIf(ASTSubstructure):
     name = "Nested If"
     technical_description = "If(..)[If(..)[..]]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(body=[If()]):
-                    yield cls.match(node, node)
+                case If(body=[If(orelse=[]) as inner]):
+                    yield cls._make_match(node, inner)
 
 
-class ConfusingElse(Substructure):
-    name = "Confusing Else"
-    technical_description = "If(..)[..] Else[If(..)[..] Else[..]]"
-
-    @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
-        for node in nodes_of_class(module, If):
-            match node:
-                case If(orelse=[If(orelse=orselse) as inner]) if len(orselse):
-                    yield cls.match(inner, inner)
-
-
-class UnnecessaryElse(Substructure):
+class UnnecessaryElse(ASTSubstructure):
     name = "Unnecessary Else"
     technical_description = "If(..)[*.., stmt] Else[stmt]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(body=[*_, _, s1], orelse=[s2]) if dirty_compare(s1, s2):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
 
 
-class DuplicateIfElseStatement(Substructure):
+class DuplicateIfElseStatement(ASTSubstructure):
     name = "Duplicate If/Else Statement"
     technical_description = "If(..)[.., stmt] Else[.., stmt]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(
@@ -283,15 +262,15 @@ class DuplicateIfElseStatement(Substructure):
                         and len(b2) > 1
                         and not dirty_compare(b1, b2)
                 ):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
 
 
-class SeveralDuplicateIfElseStatements(Substructure):
+class SeveralDuplicateIfElseStatements(ASTSubstructure):
     name = "Several Duplicate If/Else Statements"
     technical_description = "If(..)[.., *stmts] Else[.., *stmts]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(
@@ -300,45 +279,45 @@ class SeveralDuplicateIfElseStatements(Substructure):
                         match_ends(b1, b2) > 1
                         and not dirty_compare(b1, b2)
                 ):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
 
 
-class DuplicateIfElseBody(Substructure):
+class DuplicateIfElseBody(ASTSubstructure):
     name = "Duplicate If/Else Body"
     technical_description = "If(..)[body] Else[body]"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, If):
             match node:
                 case If(body=b1, orelse=b2) if dirty_compare(b1, b2):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
 
 
-class DeclarationAssignmentDivision(Substructure):
+class DeclarationAssignmentDivision(ASTSubstructure):
     name = "Declaration/Assignment Division"
     technical_description = "name: type"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
-        yield from (cls.match(assign, assign)
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
+        yield from (cls._make_match(assign, assign)
                     for assign in nodes_of_class(module, AnnAssign)
-                    if assign.simple == 1)
+                    if not hasattr(assign, 'value') or assign.value is None)
 
 
-class AugmentableAssignment(Substructure):
+class AugmentableAssignment(ASTSubstructure):
     name = "Augmentable Assignment"
     technical_description = "name = name Op() .. | .. [+*] name"
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, Assign):
             match node:
                 case Assign(
                     targets=[Name(id=n1)],
                     value=BinOp(left=Name(id=n2)),
                 ) if n1 == n2:
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
                 case Assign(
                     targets=[Name(id=n1)],
                     value=BinOp(
@@ -347,10 +326,10 @@ class AugmentableAssignment(Substructure):
                         right=Name(id=n2)
                     )
                 ) if n1 == n2:
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
 
 
-class DuplicateExpression(Substructure):
+class DuplicateExpression(ASTSubstructure):
     name = "Duplicate Expression"
     # ToDo – Clarify effenberger2022code definition. It is not clear if they
     #  are using the term expression formally or colloquially or whether they
@@ -361,7 +340,7 @@ class DuplicateExpression(Substructure):
     )
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         # ToDo - consider using something like leoAst.py.
         #  http://leoeditor.com/appendices.html#leoast-py
         expressions = nodes_of_class(module, expr)
@@ -369,11 +348,11 @@ class DuplicateExpression(Substructure):
         for i in range(len(expressions)):
             for j in range(i + 1, len(expressions)):
                 if dirty_compare(expressions[i], expressions[j]):
-                    yield cls.match(expressions[i], expressions[i])
-                    yield cls.match(expressions[j], expressions[j])
+                    yield cls._make_match(expressions[i], expressions[i])
+                    yield cls._make_match(expressions[j], expressions[j])
 
 
-class MissedAbsoluteValue(Substructure):
+class MissedAbsoluteValue(ASTSubstructure):
     name = 'Missed Absolute Value'
     technical_description = ('x < val and x > -val '
                              '| x == val or x == -val '
@@ -382,7 +361,7 @@ class MissedAbsoluteValue(Substructure):
     _inequalities = (Gt, Lt), (Lt, Gt), (GtE, LtE), (LtE, GtE), (NotEq, NotEq)
 
     @classmethod
-    def iter_matches(cls, module: Module) -> Iterable[Match]:
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
         for node in nodes_of_class(module, BoolOp):
             match node:
                 case BoolOp(
@@ -393,9 +372,28 @@ class MissedAbsoluteValue(Substructure):
                     ]
                 ) if (n1 == n2
                       and ((isinstance(op, And)
-                            and (type(op1), type(op2) in cls._inequalities))
+                            and ((type(op1), type(op2)) in cls._inequalities))
                            or (isinstance(op, Or)
                                and isinstance(op1, Eq)
                                and isinstance(op2, Eq)))
                       and are_complimentary_unary_expressions(v1, v2)):
-                    yield cls.match(node, node)
+                    yield cls._make_match(node, node)
+
+
+class RepeatedAddition(ASTSubstructure):
+    name = 'Repeated Addition'
+    technical_description = 'name = val( * val)+'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
+        # ToDo - handle reordered expressions e.g. x + y + x
+        # ToDo - handle numbers in expressions e.g. x + 1 + x
+        visited = set()
+        for node in nodes_of_class(module, BinOp):
+            if node not in visited and is_repeated_add(node):
+                visited.update(nodes_of_class(node, BinOp))
+                yield cls._make_match(node, node)
+
+# pylint x == 'a' or x == 'b' covered by R1714
+# pylint for i in range covered by C0200 ?
+# pylint x = x covered by self-assigning-variable (W0127)

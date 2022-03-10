@@ -17,12 +17,8 @@ class Markup(Enum):
 
 @dataclass
 class Description:
-    markup: Markup | str
+    markup: Markup
     content: str
-
-    def __post_init__(self):
-        if isinstance(self.markup, str):
-            self.markup = Markup[self.markup]
 
     def __str__(self):
         return f'Description({self.markup}, ' \
@@ -70,8 +66,10 @@ def append_description_from_toml(f: BinaryIO) -> None:
     :param f: the TOML BinaryIO
     """
     data = tomli.load(f)
-    descriptions = {name: Description(**values)
-                    for name, values in data.items()}
+    descriptions = {
+        name: Description(Markup[values['markup']], values['content'])
+        for name, values in data.items()
+    }
     _DESCRIPTIONS.append(descriptions)
 
 

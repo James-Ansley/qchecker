@@ -10,14 +10,8 @@ from qchecker.descriptions import Description
 class TextRange:
     from_line: int
     from_offset: int
-    to_line: int = None
-    to_offset: int = None
-
-    def __post_init__(self):
-        if self.to_line is None:
-            self.to_line = self.from_line
-        if self.to_offset is None:
-            self.to_offset = self.from_offset
+    to_line: int
+    to_offset: int
 
     def contains(self, other: 'TextRange'):
         this_from = (self.from_line, self.from_offset)
