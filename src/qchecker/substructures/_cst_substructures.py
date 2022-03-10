@@ -1,6 +1,5 @@
 import abc
 from collections.abc import Iterable
-from itertools import chain
 
 import qchecker.match
 from libcst import *

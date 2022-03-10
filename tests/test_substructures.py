@@ -613,6 +613,20 @@ def test_repeated_addition():
     assert match3.text_range == TextRange(4, 4, 4, 17)
 
 
+def test_repeated_multiplication():
+    code = dedent('''
+    y = x * x * x
+    y = x * x * x * x
+    y = y * x * x * x
+    
+    y = x * x
+    ''')
+    match1, match2, match3 = RepeatedMultiplication.iter_matches(code)
+    assert match1.text_range == TextRange(2, 4, 2, 13)
+    assert match2.text_range == TextRange(3, 4, 3, 17)
+    assert match3.text_range == TextRange(4, 4, 4, 17)
+
+
 def test_confusing_else():
     code = dedent('''
     def foo(x):

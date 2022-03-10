@@ -155,3 +155,7 @@ content = ''''''  # ToDo - Add Description
 [RepeatedAddition]
 markup = 'markdown'
 content = ''''''  # ToDo - Add Description
+
+[RepeatedMultiplication]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description

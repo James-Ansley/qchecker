@@ -10,8 +10,10 @@ __all__ = [
     'are_compliment_operators',
     'are_compliment_bools',
     'weight_of',
+    'are_negated_unary_expressions',
     'are_complimentary_unary_expressions',
     'is_repeated_add',
+    'is_repeated_multiplication',
 ]
 
 _COMPLIMENT_OPS = {
@@ -82,6 +84,21 @@ def are_compliment_operators(n1, n2):
     return type(n1) == _COMPLIMENT_OPS[type(n2)]
 
 
+def are_negated_unary_expressions(n1, n2):
+    match (n1, n2):
+        case (
+            cond1,
+            ast.UnaryOp(op=ast.USub(), operand=cond2),
+        ) if dirty_compare(cond1, cond2):
+            return True
+        case (
+            ast.UnaryOp(op=ast.USub(), operand=cond1),
+            cond2,
+        ) if dirty_compare(cond1, cond2):
+            return True
+    return False
+
+
 def are_compliment_binary_expressions(n1: ast.Compare, n2: ast.Compare):
     """Matches `x < 5` compliments `x >= 5 `"""
     match (n1, n2):
@@ -102,11 +119,11 @@ def are_complimentary_unary_expressions(n1, n2):
     match (n1, n2):
         case (
             cond1,
-            ast.UnaryOp(op=ast.Not() | ast.USub(), operand=cond2),
+            ast.UnaryOp(op=ast.Not(), operand=cond2),
         ) if dirty_compare(cond1, cond2):
             return True
         case (
-            ast.UnaryOp(op=ast.Not() | ast.USub(), operand=cond1),
+            ast.UnaryOp(op=ast.Not(), operand=cond1),
             cond2,
         ) if dirty_compare(cond1, cond2):
             return True
@@ -165,3 +182,9 @@ def weight_of(node):
 def is_repeated_add(node: ast.BinOp):
     code = ast.unparse(node)
     return re.search(r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \+ \1)+', code) is not None
+
+
+def is_repeated_multiplication(node: ast.BinOp):
+    code = ast.unparse(node)
+    regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \* \1){2,}'
+    return re.search(regex, code) is not None

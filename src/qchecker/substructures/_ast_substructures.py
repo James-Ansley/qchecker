@@ -27,6 +27,7 @@ __all__ = [
     'DuplicateExpression',
     'MissedAbsoluteValue',
     'RepeatedAddition',
+    'RepeatedMultiplication',
 ]
 
 
@@ -376,21 +377,34 @@ class MissedAbsoluteValue(ASTSubstructure):
                            or (isinstance(op, Or)
                                and isinstance(op1, Eq)
                                and isinstance(op2, Eq)))
-                      and are_complimentary_unary_expressions(v1, v2)):
+                      and are_negated_unary_expressions(v1, v2)):
                     yield cls._make_match(node, node)
 
 
 class RepeatedAddition(ASTSubstructure):
     name = 'Repeated Addition'
-    technical_description = 'name = val( * val)+'
+    technical_description = 'val( + val)+'
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterable[Match]:
-        # ToDo - handle reordered expressions e.g. x + y + x
-        # ToDo - handle numbers in expressions e.g. x + 1 + x
+        # ToDo – Make this better
         visited = set()
         for node in nodes_of_class(module, BinOp):
             if node not in visited and is_repeated_add(node):
+                visited.update(nodes_of_class(node, BinOp))
+                yield cls._make_match(node, node)
+
+
+class RepeatedMultiplication(ASTSubstructure):
+    name = 'Repeated Multiplication'
+    technical_description = 'val( * val){2,}'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterable[Match]:
+        # ToDo – Make this better
+        visited = set()
+        for node in nodes_of_class(module, BinOp):
+            if node not in visited and is_repeated_multiplication(node):
                 visited.update(nodes_of_class(node, BinOp))
                 yield cls._make_match(node, node)
 
