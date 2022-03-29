@@ -1,5 +1,6 @@
 from textwrap import dedent
 
+import pytest
 from qchecker.match import TextRange
 from qchecker.substructures import *
 
@@ -627,6 +628,54 @@ def test_repeated_multiplication():
     assert match3.text_range == TextRange(4, 4, 4, 17)
 
 
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('1 * x', True),
+     ('x / x', True),
+     ('x / 1', True),
+     ('x + 0', True),
+     ('0 + x', True),
+     ('x * 1', True),
+     ('+x', True),
+     ('x + 1', False),
+     ('x / y', False),
+     ('-x', False),
+     ('1 / x', False),
+     ('x // 1', False))
+)
+def test_redundant_arithmetic(line: str, should_match: bool):
+    match = next(RedundantArithmetic.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line))
+
+
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('not x < y', True),
+     ('not x > y', True),
+     ('not x == y', True),
+     ('not x != y', True),
+     ('not x <= y', True),
+     ('not x >= y', True),
+     ('not x is y', True),
+     ('not x is not y', True),
+     ('not x in y', True),
+     ('not x not in y', True),
+     ('x not in y', False),
+     ('x is not y', False),
+     ('x != y', False),
+     ('x < y', False),
+     ('x and not y', False),
+     ('not x and y', False))
+)
+def test_redundant_not(line, should_match):
+    match = next(RedundantNot.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line))
+
+
 def test_confusing_else():
     code = dedent('''
     def foo(x):
@@ -648,3 +697,49 @@ def test_confusing_else():
     ''')
     match, = ConfusingElse.iter_matches(code)
     assert match.text_range == TextRange(6, 8, 9, 31)
+
+
+def test_else_if():
+    code = dedent('''
+    def foo(x):
+        if x > 10:
+            return 'Big'
+        else:
+            if x > 5:
+                return 'med'
+        return 'small'
+    
+    def foo(x):
+        # No match
+        if x > 10:
+            return 'Big'
+        elif x > 5:
+            return 'med'
+        else:
+            return 'small'
+    ''')
+    match, = ElseIf.iter_matches(code)
+    assert match.text_range == TextRange(5, 4, 6, 16)
+
+
+def test_redundant_indexed_for():
+    code = dedent('''
+    def foo(seq):
+        for i in range(len(seq)):
+            print(seq[i])
+    
+    def bar(seq):
+        for i in range(len(seq)):
+            yield seq[i]
+    
+    def baz(seq):
+        for i in range(len(seq)):
+            seq[i] += 1
+    
+    def goo(seq):
+        for i in range(len(seq)):
+            print(i)
+    ''')
+    match1, match2 = RedundantIndexedFor.iter_matches(code)
+    assert match1.text_range == TextRange(3, 4, 4, 21)
+    assert match2.text_range == TextRange(7, 4, 8, 20)

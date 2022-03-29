@@ -55,7 +55,7 @@ def set_descriptions(*descriptions: dict[str, 'Description']) -> None:
     descriptions
     """
     global _DESCRIPTIONS
-    _DESCRIPTION_PATHS = list(descriptions)
+    _DESCRIPTIONS = list(descriptions)
 
 
 def append_description_from_toml(f: BinaryIO) -> None:

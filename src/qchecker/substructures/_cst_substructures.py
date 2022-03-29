@@ -7,7 +7,10 @@ from libcst.metadata import PositionProvider
 from qchecker.match import Match, TextRange
 from qchecker.substructures._base import Substructure
 
-__all__ = ['ConfusingElse']
+__all__ = [
+    'ConfusingElse',
+    'ElseIf',
+]
 
 
 class CSTSubstructure(Substructure, abc.ABC):
@@ -79,3 +82,23 @@ class ConfusingElse(CSTSubstructure):
                     )
                 ):
                     yield cls._make_match(inner, inner, node_position_map)
+
+
+class ElseIf(CSTSubstructure):
+    name = 'Else If'
+    technical_description = 'IF(..)[] Else[If()]'
+
+    @classmethod
+    def _iter_matches(cls, module: MetadataWrapper) -> Iterable[Match]:
+        # ToDo - Adjust end lineno and col offset
+        nodes, node_position_map = visit(module, If)
+        for node in nodes:
+            match node:
+                case If(
+                    orelse=Else(
+                        body=IndentedBlock(body=[
+                            If(test=inner)
+                        ])
+                    ) as orelse
+                ):
+                    yield cls._make_match(orelse, inner, node_position_map)

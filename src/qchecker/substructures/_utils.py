@@ -14,7 +14,10 @@ __all__ = [
     'are_complimentary_unary_expressions',
     'is_repeated_add',
     'is_repeated_multiplication',
+    'name_is_only_used_with_subscript',
 ]
+
+from copy import deepcopy
 
 _COMPLIMENT_OPS = {
     ast.Eq: ast.NotEq,
@@ -152,6 +155,22 @@ def are_complimented_expression_boolean_literals(n1, n2):
     return False
 
 
+def are_compliment_mod_ops(n1, n2):
+    match (n1, n2):
+        case (
+        ast.Compare(
+            ast.BinOp(
+                left=ast.Name(id=x),
+                op=ast.Mod(),
+                right=ast.Constant(value=2)
+            ),
+            ops=[ast.Eq()],
+            comparators=[ast.Constant(value=v1)]
+        )
+        ):
+            ...
+
+
 def are_compliment_operations(n1, n2):
     """
     Returns True if the two nodes n1 and n2 are compliment expressions of
@@ -188,3 +207,29 @@ def is_repeated_multiplication(node: ast.BinOp):
     code = ast.unparse(node)
     regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \* \1){2,}'
     return re.search(regex, code) is not None
+
+
+def name_is_only_used_with_subscript(for_, name, subscript):
+    loop = deepcopy(for_)
+    _link_parents(loop)
+    name_is_used = False
+    for node in nodes_of_class(loop, ast.Name):
+        if node.id == name:
+            name_is_used = True
+            match node.parent:
+                case ast.Subscript(
+                    value=ast.Name(id=name1, ctx=ast.Load()),
+                    slice=ast.Name(id=subscript1, ctx=ast.Load()),
+                    ctx=ast.Load()
+                ) if (
+                    (name == name1 and subscript == subscript1)
+                ):
+                    continue
+            return False
+    return name_is_used
+
+
+def _link_parents(node, parent=None):
+    node.parent = parent
+    for child in ast.iter_child_nodes(node):
+        _link_parents(child, node)
