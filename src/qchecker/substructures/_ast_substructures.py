@@ -30,7 +30,6 @@ __all__ = [
     'RepeatedMultiplication',
     'RedundantArithmetic',
     'RedundantNot',
-    'RedundantIndexedFor',
 ]
 
 
@@ -453,26 +452,6 @@ class RedundantNot(ASTSubstructure):
                 ):
                     yield cls._make_match(node, node)
 
-
-class RedundantIndexedFor(ASTSubstructure):
-    name = 'Redundant Indexed For'
-    technical_description = ''
-
-    @classmethod
-    def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        # ToDo - There has to be a better way of doing this
-        for node in nodes_of_class(module, For):
-            match node:
-                case For(
-                    target=Name(id=target_id),
-                    iter=Call(
-                        func=Name(id='range'),
-                        args=[Call(func=Name(id='len'), args=[Name(id=seq)])]
-                    ),
-                    body=body
-                ) if (all(name_is_only_used_with_subscript(b, seq, target_id)
-                          for b in body)):
-                    yield cls._make_match(node, node)
 
 # pylint x == 'a' or x == 'b' covered by R1714
 # pylint for i in range covered by C0200 ?

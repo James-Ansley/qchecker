@@ -720,26 +720,3 @@ def test_else_if():
     ''')
     match, = ElseIf.iter_matches(code)
     assert match.text_range == TextRange(5, 4, 6, 16)
-
-
-def test_redundant_indexed_for():
-    code = dedent('''
-    def foo(seq):
-        for i in range(len(seq)):
-            print(seq[i])
-    
-    def bar(seq):
-        for i in range(len(seq)):
-            yield seq[i]
-    
-    def baz(seq):
-        for i in range(len(seq)):
-            seq[i] += 1
-    
-    def goo(seq):
-        for i in range(len(seq)):
-            print(i)
-    ''')
-    match1, match2 = RedundantIndexedFor.iter_matches(code)
-    assert match1.text_range == TextRange(3, 4, 4, 21)
-    assert match2.text_range == TextRange(7, 4, 8, 20)
