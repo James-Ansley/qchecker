@@ -8,29 +8,24 @@ from qchecker.descriptions import Markup, Description
 from qchecker.match import Match, TextRange
 
 
-def _run_pylint(code: str) -> list[dict]:
+def _run_pylint(code: str, errors: list[str] | None) -> list[dict]:
     """
     Runs pylint on the given code and returns a list of dictionaries
     containing the resulting errors or warnings.
     """
     # Stdin swapping is faster than running a subprocess. Although this
-    # likely can't be used with multithreading.
+    # likely can't be used with multiprocessing.
     pylint_output = StringIO()
     # This is why you don't diddle with other people's IO without asking.
     sys.stdin = TextIOWrapper(BytesIO(code.encode()))
+
+    commands = []
+    if errors is not None:
+        commands += ('--disable', 'all', '--enable', *errors)
+    commands += ('--from-stdin', '_pylint_runner')
+
     Run(
-        [
-            '--disable',
-            'C0115,'  # missing-class-docstring
-            'C0116,'  # missing-function-docstring
-            'C0114,'  # missing-module-docstring
-            'C0103,'  # invalid-name – This matches any single char variable
-            'C0301,'  # line-too-long
-            'C1803,'  # use-implicit-booleaness-not-comparison
-            'C0121,'  # singleton-comparison – students don't know this
-            '',
-            '--from-stdin', '_pylint_runner'
-        ],
+        commands,
         reporter=JSONReporter(pylint_output),
         do_exit=False,
     )
@@ -39,7 +34,7 @@ def _run_pylint(code: str) -> list[dict]:
     return json.loads(result)
 
 
-def get_pylint_matches(code: str) -> list[Match]:
+def get_pylint_matches(code: str, errors: list[str] = None) -> list[Match]:
     """Returns a list of matches detected by pylint"""
     return [
         Match(
@@ -51,5 +46,5 @@ def get_pylint_matches(code: str) -> list[Match]:
                 pl_match['endLine'],
                 pl_match['endColumn']
             ),
-        ) for pl_match in _run_pylint(code)
+        ) for pl_match in _run_pylint(code, errors)
     ]

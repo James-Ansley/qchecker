@@ -1,6 +1,7 @@
 from textwrap import dedent
 
 import pytest
+
 from qchecker.match import TextRange
 from qchecker.substructures import *
 
@@ -43,13 +44,21 @@ def test_unnecessary_elif():
             print('x is')
         elif x < 5 == False:
             print('x is not')
+    
+    def baz(x):
+        if x % 2 == 0:
+            print('x is even')
+        elif x % 2 == 1:
+            print('x is weird')
     ''')
-    match1, match2, match3, match4, match5 = UnnecessaryElif.iter_matches(code)
+    match1, match2, match3, match4, match5, match6 = \
+        UnnecessaryElif.iter_matches(code)
     assert match1.text_range == TextRange(3, 4, 6, 27)
     assert match2.text_range == TextRange(16, 4, 19, 25)
     assert match3.text_range == TextRange(22, 4, 25, 27)
     assert match4.text_range == TextRange(28, 4, 31, 21)
     assert match5.text_range == TextRange(34, 4, 37, 25)
+    assert match6.text_range == TextRange(40, 4, 43, 27)
 
 
 def test_if_else_return_bool():
@@ -59,13 +68,13 @@ def test_if_else_return_bool():
             return True
         else:
             return False
-    
+
     def bar(x):
         if x > 5:
             return False
         else:
             return True
-    
+
     def baz(x):
         # No match
         if x > 5:
@@ -73,14 +82,14 @@ def test_if_else_return_bool():
             return True
         else:
             return False
-    
+
     def my_friend_goo(x):
         # No match
         if x > 5:
             return True
         else:
             return 5
-    
+
     def she_always_knows_just_what_to_do(x):
         # No match
         if x > 5:
@@ -99,25 +108,25 @@ def test_if_return_bool():
         if x > 5:
             return True
         return False
-    
+
     def bar(x):
         if x > 5:
             return False
         return True
-    
+
     def baz(x):
         # No Match
         if x > 5:
             print('A side effect')
             return True
         return False
-    
+
     def my_friend_goo(x):
         # No Match
         if x > 5:
             return x
         return True
-    
+
     def she_always_knows_just_what_to_do(x):
         # No Match
         if x > 5:
@@ -137,14 +146,14 @@ def test_if_else_assign_bool_return():
         else:
             res = False
         return res
-    
+
     def bar(x):
         if x > 5:
             res = False
         else:
             res = True
         return res
-    
+
     def baz(x):
         # No Match
         if x > 5:
@@ -152,7 +161,7 @@ def test_if_else_assign_bool_return():
         else:
             res = False
         return res
-    
+
     def my_friend_goo(x):
         # No Match
         if x > 5:
@@ -160,7 +169,7 @@ def test_if_else_assign_bool_return():
         else:
             res = 5
         return res
-    
+
     def she_always_knows_just_what_to_do(x):
         # No Match
         if x > 5:
@@ -169,7 +178,7 @@ def test_if_else_assign_bool_return():
         else:
             res = False
         return res
-    
+
     def what_she_does_best_is_stand_and_stare(x):
         # No Match
         y = x
@@ -192,14 +201,14 @@ def test_if_else_assign_return():
         else:
             res = 'small'
         return res
-        
+
     def bar(x):
         if x > 5:
             res = True
         else:
             res = 5
         return res
-    
+
     def baz(x):
         # no match
         if x > 5:
@@ -207,7 +216,7 @@ def test_if_else_assign_return():
         else:
             res = False
         return res
-        
+
     def my_friend_goo(x):
         # no match
         y = x
@@ -216,7 +225,7 @@ def test_if_else_assign_return():
         else:
             res = 5
         return y
-        
+
     def she_always_knows_just_what_to_do(x):
         # no match
         if x > 5:
@@ -239,14 +248,14 @@ def test_if_else_assign_bool():
         else:
             y = False
         print(y)
-    
+
     def bar(x):
         if x > 5:
             y = False
         else:
             y = True
         print(y)
-    
+
     def baz(x):
         # no match
         if x > 5:
@@ -254,7 +263,7 @@ def test_if_else_assign_bool():
         else:
             y = False
         return y
-    
+
     def my_friend_goo(x):
         # no match
         if x > 5:
@@ -274,19 +283,19 @@ def test_empty_if_body():
             ...
         else:
             print('Do something')
-        
+
     def bar(x):
         if x > 5:
             pass
         else:
             print('Do something')
-    
+
     def baz(x):
         if x > 5:
             x = x
         else:
             x += 1
-            
+
     def my_friend_goo(x):
         # no match
         if x > 5:
@@ -343,7 +352,7 @@ def test_nested_if():
                 return True
         else:
             return False
-    
+
     def bar(x):
         # no match
         if x > 5:
@@ -352,7 +361,7 @@ def test_nested_if():
                 return True
         else:
             return False
-    
+
     def baz(x):
         # no match
         if x > 5:
@@ -364,7 +373,7 @@ def test_nested_if():
             print('small')
     ''')
     match, = NestedIf.iter_matches(code)
-    assert match.text_range == TextRange(3, 4, 5, 23)
+    assert match.text_range == TextRange(4, 8, 5, 23)
 
 
 def test_unnecessary_else():
@@ -376,7 +385,7 @@ def test_unnecessary_else():
             return result
         else:
             return result
-        
+
     def bar(x):
         # no match
         if x > 5:
@@ -385,7 +394,7 @@ def test_unnecessary_else():
         else:
             result = 'small'
             return result
-    
+
     def baz(x):
         # no match
         if x > 5:
@@ -407,7 +416,7 @@ def test_duplicate_if_else_statement():
         else:
             result = 'small'
             return result
-        
+
     def bar(x):
         # No match
         if x > 5:
@@ -416,7 +425,7 @@ def test_duplicate_if_else_statement():
         else:
             print('Hello')
             print('World')
-    
+
     def baz(x):
         # no match
         result = 'small'
@@ -425,14 +434,14 @@ def test_duplicate_if_else_statement():
             return result
         else:
             return result
-    
+
     def my_friend_goo(x):
         # no match
         if x > 5:
             result = 'large'
         else:
             result = 'small'
-    
+
     def she_always_knows_just_what_to_do(x):
         # no match
         if x > 5:
@@ -461,7 +470,7 @@ def test_several_duplicate_if_else_statements():
             result = 'small'
             print('Do something')
             return result
-        
+
     def bar(x):
         # No match
         if x > 5:
@@ -470,7 +479,7 @@ def test_several_duplicate_if_else_statements():
         else:
             print('Hello')
             print('World')
-    
+
     def baz(x):
         # no match
         result = 'small'
@@ -479,7 +488,7 @@ def test_several_duplicate_if_else_statements():
             return result
         else:
             return result
-    
+
     def my_friend_goo(x):
         # no match
         if x > 5:
@@ -500,7 +509,7 @@ def test_duplicate_if_else_body():
         else:
             print('Hello')
             print('World')
-        
+
     def bar(x):
         # No match
         if x > 5:
@@ -512,7 +521,7 @@ def test_duplicate_if_else_body():
             result = 'small'
             print('Do something')
             return result
-    
+
     def baz(x):
         # no match
         result = 'small'
@@ -521,7 +530,7 @@ def test_duplicate_if_else_body():
             return result
         else:
             return result
-    
+
     def my_friend_goo(x):
         # no match
         if x > 5:
@@ -531,22 +540,6 @@ def test_duplicate_if_else_body():
     ''')
     match, = DuplicateIfElseBody.iter_matches(code)
     assert match.text_range == TextRange(3, 4, 8, 22)
-
-
-def test_declaration_assignment_division():
-    code = dedent('''
-    def foo(x):
-        y: int
-        y = x
-    
-    def bar(x):
-        y: int = x
-    
-    def baz(x: int):
-        return x
-    ''')
-    match, = DeclarationAssignmentDivision.iter_matches(code)
-    assert match.text_range == TextRange(3, 4, 3, 10)
 
 
 def test_augmentable_assignment():
@@ -559,7 +552,7 @@ def test_augmentable_assignment():
     x = x - 2
     x = x // 2
     x = x ** 2
-    
+
     # No match
     x = 2 / x
     x = 2 - x
@@ -590,7 +583,7 @@ def test_missed_absolute_value():
     if x < 5 and x > -5: ...
     if x <= 5 and x >= -5: ...
     if x != 5 and x != -5: ...
-    
+
     if x == 5 and x == -5: ...
     if x < 5 and x < -5: ...
     if x <= 5 and x > -5: ...
@@ -619,7 +612,7 @@ def test_repeated_multiplication():
     y = x * x * x
     y = x * x * x * x
     y = y * x * x * x
-    
+
     y = x * x
     ''')
     match1, match2, match3 = RepeatedMultiplication.iter_matches(code)
@@ -674,49 +667,49 @@ def test_redundant_not(line, should_match):
     assert (match is not None) == should_match
     if should_match:
         assert match.text_range == TextRange(1, 0, 1, len(line))
-
-
-def test_confusing_else():
-    code = dedent('''
-    def foo(x):
-        if x < 5:
-            print('x is small')
-        else:
-            if x < 10:
-                print('x is medium')
-            else:
-                print('x is large')
-            
-    def bar(x):
-        if x < 5:
-            print('x is small')
-        elif x < 10:
-            print('x is medium')
-        else:
-            print('x is large')
-    ''')
-    match, = ConfusingElse.iter_matches(code)
-    assert match.text_range == TextRange(6, 8, 9, 31)
-
-
-def test_else_if():
-    code = dedent('''
-    def foo(x):
-        if x > 10:
-            return 'Big'
-        else:
-            if x > 5:
-                return 'med'
-        return 'small'
-    
-    def foo(x):
-        # No match
-        if x > 10:
-            return 'Big'
-        elif x > 5:
-            return 'med'
-        else:
-            return 'small'
-    ''')
-    match, = ElseIf.iter_matches(code)
-    assert match.text_range == TextRange(5, 4, 6, 16)
+#
+#
+# def test_confusing_else():
+#     code = dedent('''
+#     def foo(x):
+#         if x < 5:
+#             print('x is small')
+#         else:
+#             if x < 10:
+#                 print('x is medium')
+#             else:
+#                 print('x is large')
+#
+#     def bar(x):
+#         if x < 5:
+#             print('x is small')
+#         elif x < 10:
+#             print('x is medium')
+#         else:
+#             print('x is large')
+#     ''')
+#     match, = ConfusingElse.iter_matches(code)
+#     assert match.text_range == TextRange(6, 8, 9, 31)
+#
+#
+# def test_else_if():
+#     code = dedent('''
+#     def foo(x):
+#         if x > 10:
+#             return 'Big'
+#         else:
+#             if x > 5:
+#                 return 'med'
+#         return 'small'
+#
+#     def foo(x):
+#         # No match
+#         if x > 10:
+#             return 'Big'
+#         elif x > 5:
+#             return 'med'
+#         else:
+#             return 'small'
+#     ''')
+#     match, = ElseIf.iter_matches(code)
+#     assert match.text_range == TextRange(5, 4, 6, 16)

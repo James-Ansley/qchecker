@@ -1,12 +1,11 @@
 import abc
+import re
 from ast import *
-from collections.abc import Iterator
-from itertools import chain
+from collections.abc import Iterator, Iterable
+from itertools import chain, combinations
 
 from qchecker.match import Match, TextRange
 from qchecker.substructures._base import Substructure
-
-from ._utils import *
 
 __all__ = [
     'UnnecessaryElif',
@@ -22,7 +21,6 @@ __all__ = [
     'DuplicateIfElseStatement',
     'SeveralDuplicateIfElseStatements',
     'DuplicateIfElseBody',
-    'DeclarationAssignmentDivision',
     'AugmentableAssignment',
     'DuplicateExpression',
     'MissedAbsoluteValue',
@@ -54,7 +52,8 @@ class ASTSubstructure(Substructure, abc.ABC):
                    for submatch in matches)
 
     @classmethod
-    def _make_match(cls, from_node, to_node):
+    def _make_match(cls, from_node, to_node=None):
+        to_node = to_node if to_node is not None else from_node
         return Match(
             cls.name,
             cls.description,
@@ -73,15 +72,10 @@ class UnnecessaryElif(ASTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        # ToDo - Check x % 2 == 0 and x % 2 == 1
         for node in nodes_of_class(module, If):
             match node:
-                case If(
-                    test=t1, orelse=[If(test=t2)]
-                ) if (
-                    are_compliment_operations(t1, t2)
-                ):
-                    yield cls._make_match(node, node)
+                case If(test=t1, orelse=[If(test=t2)]) if compliments(t1, t2):
+                    yield cls._make_match(node)
 
 
 class IfElseReturnBool(ASTSubstructure):
@@ -94,10 +88,10 @@ class IfElseReturnBool(ASTSubstructure):
         for node in nodes_of_class(module, If):
             match node:
                 case If(
-                    body=[Return(Constant(r1))],
-                    orelse=[Return(Constant(r2))]
-                ) if are_compliment_bools(r1, r2):
-                    yield cls._make_match(node, node)
+                    body=[Return(Constant(c1))],
+                    orelse=[Return(Constant(c2))],
+                ) if compliment_bools(c1, c2):
+                    yield cls._make_match(node)
 
 
 class IfReturnBool(ASTSubstructure):
@@ -107,38 +101,31 @@ class IfReturnBool(ASTSubstructure):
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, FunctionDef):
-            match node:
-                case FunctionDef(
-                    body=[
-                        *_,
-                        If(body=[Return(Constant(v1))]) as n1,
-                        Return(Constant(v2)) as n2,
-                    ]
-                ) if are_compliment_bools(v1, v2):
-                    yield cls._make_match(n1, n2)
+            match node.body:
+                case [
+                    *_,
+                    If(body=[Return(Constant(v1))]) as start,
+                    Return(Constant(v2)) as end
+                ] if compliment_bools(v1, v2):
+                    yield cls._make_match(start, end)
 
 
 class IfElseAssignBoolReturn(ASTSubstructure):
+    # Covered by pylint-R1703
     name = "If/Else Assign Bool Return"
     technical_description = "If(..)[name=bool] Else[name=!bool], Return name"
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, FunctionDef):
-            match node:
-                case FunctionDef(
-                    body=[
-                        *_,
-                        If(body=[Assign([t1], Constant(b1))],
-                           orelse=[Assign([t2], Constant(b2))]) as n1,
-                        Return(Name(t3)) as n2
-                    ]
-                ) if (
-                        are_compliment_bools(b1, b2)
-                        and dirty_compare(t1, t2)
-                        and t1.id == t3
-                ):
-                    yield cls._make_match(n1, n2)
+            match node.body:
+                case [
+                    *_,
+                    If(body=[Assign([Name(n1)], Constant(v1))],
+                       orelse=[Assign([Name(n2)], Constant(v2))]) as start,
+                    Return(Name(n3)) as end,
+                ] if (n1 == n2 == n3 and compliment_bools(v1, v2)):
+                    yield cls._make_match(start, end)
 
 
 class IfElseAssignReturn(ASTSubstructure):
@@ -149,26 +136,20 @@ class IfElseAssignReturn(ASTSubstructure):
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, FunctionDef):
-            match node:
-                case FunctionDef(
-                    body=[
-                        *_,
-                        If(
-                            body=[
-                                Assign(targets=[Name(id=n1)])
-                                | AnnAssign(target=Name(id=n1))
-                                | AugAssign(target=Name(id=n1))
-                            ],
-                            orelse=[
-                                Assign(targets=[Name(id=n2)])
-                                | AnnAssign(target=Name(id=n2))
-                                | AugAssign(target=Name(id=n2))
-                            ],
-                        ) as node1,
-                        Return(Name(id=n3)) as node2,
-                    ]
-                ) if n1 == n2 == n3:
-                    match = cls._make_match(node1, node2)
+            match node.body:
+                case [
+                    *_,
+                    If(
+                        body=[Assign([Name(n1)])
+                              | AnnAssign(Name(n1))
+                              | AugAssign(Name(n1))],
+                        orelse=[Assign([Name(n2)])
+                                | AnnAssign(Name(n2))
+                                | AugAssign(Name(n2))],
+                    ) as start,
+                    Return(Name(id=n3)) as end,
+                ] if (n1 == n2 == n3):
+                    match = cls._make_match(start, end)
                     if not cls.match_collides_with_subset(module, match):
                         yield match
 
@@ -183,13 +164,10 @@ class IfElseAssignBool(ASTSubstructure):
         for node in nodes_of_class(module, If):
             match node:
                 case If(
-                    body=[Assign([t1], Constant(b1))],
-                    orelse=[Assign([t2], Constant(b2))]
-                ) if (
-                        are_compliment_bools(b1, b2)
-                        and dirty_compare(t1, t2)
-                ):
-                    match = cls._make_match(node, node)
+                    body=[Assign([Name(n1)], Constant(v1))],
+                    orelse=[Assign([Name(n2)], Constant(v2))],
+                ) if (n1 == n2 and compliment_bools(v1, v2)):
+                    match = cls._make_match(node)
                     if not cls.match_collides_with_subset(module, match):
                         yield match
 
@@ -202,11 +180,7 @@ class EmptyIfBody(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(body=[Expr(Constant()) | Pass() as body]):
-                    yield cls._make_match(node, body)
-                case If(body=[
-                    Assign(targets=[Name(id=n1)], value=Name(id=n2)) as body
-                ]) if n1 == n2:
+                case If(body=[body]) if is_nop(body):
                     yield cls._make_match(node, body)
 
 
@@ -218,12 +192,8 @@ class EmptyElseBody(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(orelse=[Expr(Constant()) | Pass()]):
-                    yield cls._make_match(node, node)
-                case If(orelse=[
-                    Assign(targets=[Name(id=n1)], value=Name(id=n2))
-                ]) if n1 == n2:
-                    yield cls._make_match(node, node)
+                case If(orelse=[body]) if is_nop(body):
+                    yield cls._make_match(node, body)
 
 
 class NestedIf(ASTSubstructure):
@@ -235,19 +205,22 @@ class NestedIf(ASTSubstructure):
         for node in nodes_of_class(module, If):
             match node:
                 case If(body=[If(orelse=[]) as inner]):
-                    yield cls._make_match(node, inner)
+                    yield cls._make_match(inner)
 
 
 class UnnecessaryElse(ASTSubstructure):
+    # ToDo - Shouldn't the inverse of this be checked? UnnecessaryIf?
     name = "Unnecessary Else"
-    technical_description = "If(..)[*.., stmt] Else[stmt]"
+    technical_description = "If(..)[*.., stmts] Else[stmts]"
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(body=[*_, _, s1], orelse=[s2]) if dirty_compare(s1, s2):
-                    yield cls._make_match(node, node)
+                case If(body=b1, orelse=b2) if (
+                        match_ends(b1, b2) == len(b2) and not equals(b1, b2)
+                ):
+                    yield cls._make_match(node)
 
 
 class DuplicateIfElseStatement(ASTSubstructure):
@@ -258,15 +231,12 @@ class DuplicateIfElseStatement(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(
-                    body=b1, orelse=b2
-                ) if (
-                        match_ends(b1, b2) == 1
-                        and len(b1) > 1
-                        and len(b2) > 1
-                        and not dirty_compare(b1, b2)
+                case If(body=b1, orelse=b2) if (
+                        len(b2) > 1 and len(b1) > 1
+                        and match_ends(b1, b2) == 1
+                        and not equals(b1, b2)
                 ):
-                    yield cls._make_match(node, node)
+                    yield cls._make_match(node)
 
 
 class SeveralDuplicateIfElseStatements(ASTSubstructure):
@@ -277,13 +247,12 @@ class SeveralDuplicateIfElseStatements(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(
-                    body=b1, orelse=b2
-                ) if (
-                        match_ends(b1, b2) > 1
-                        and not dirty_compare(b1, b2)
+                case If(body=b1, orelse=b2) if (
+                        len(b2) > 1 and len(b1) > 1
+                        and match_ends(b1, b2) > 1
+                        and not equals(b1, b2)
                 ):
-                    yield cls._make_match(node, node)
+                    yield cls._make_match(node)
 
 
 class DuplicateIfElseBody(ASTSubstructure):
@@ -294,19 +263,8 @@ class DuplicateIfElseBody(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, If):
             match node:
-                case If(body=b1, orelse=b2) if dirty_compare(b1, b2):
-                    yield cls._make_match(node, node)
-
-
-class DeclarationAssignmentDivision(ASTSubstructure):
-    name = "Declaration/Assignment Division"
-    technical_description = "name: type"
-
-    @classmethod
-    def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        yield from (cls._make_match(assign, assign)
-                    for assign in nodes_of_class(module, AnnAssign)
-                    if not hasattr(assign, 'value') or assign.value is None)
+                case If(body=b1, orelse=b2) if equals(b1, b2):
+                    yield cls._make_match(node)
 
 
 class AugmentableAssignment(ASTSubstructure):
@@ -316,42 +274,39 @@ class AugmentableAssignment(ASTSubstructure):
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, Assign):
+            # ToDo – depending on type may not have augmented operations
+            #   Should infer type if possible
             match node:
                 case Assign(
-                    targets=[Name(id=n1)],
-                    value=BinOp(left=Name(id=n2)),
+                    targets=[Name(n1)],
+                    value=BinOp(Name(n2))
                 ) if n1 == n2:
-                    yield cls._make_match(node, node)
+                    yield cls._make_match(node)
+                # ToDo – depending on type may not be commutative
                 case Assign(
-                    targets=[Name(id=n1)],
-                    value=BinOp(
-                        # ToDo - Check for other commutative ops
-                        op=Add() | Mult(),
-                        right=Name(id=n2)
-                    )
+                    targets=[Name(n1)],
+                    value=BinOp(op=Add() | Mult(), right=Name(n2))
                 ) if n1 == n2:
-                    yield cls._make_match(node, node)
+                    yield cls._make_match(node)
 
 
 class DuplicateExpression(ASTSubstructure):
     name = "Duplicate Expression"
-    # ToDo – Clarify effenberger2022code definition. It is not clear if they
-    #  are using the term expression formally or colloquially or whether they
-    #  account for control flow
     technical_description = (
         "Module contains two expressions with more than 8 names, literals, "
-        "or operators. Operators count for two tokens."
+        "or operators. Operators have twice the weight of other tokens."
     )
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        # ToDo - Probably better if this just checks for a match in
+        #  function definitions or is otherwise limited to local scopes
         expressions = nodes_of_class(module, expr)
-        expressions = [n for n in expressions if weight_of(n) >= 8]
-        for i in range(len(expressions)):
-            for j in range(i + 1, len(expressions)):
-                if dirty_compare(expressions[i], expressions[j]):
-                    yield cls._make_match(expressions[i], expressions[i])
-                    yield cls._make_match(expressions[j], expressions[j])
+        expressions = [n for n in expressions if weight(n) >= 8]
+        for ex1, ex2 in combinations(expressions, 2):
+            if equals(ex1, ex2):
+                yield cls._make_match(ex1)
+                yield cls._make_match(ex2)
 
 
 class MissedAbsoluteValue(ASTSubstructure):
@@ -368,18 +323,20 @@ class MissedAbsoluteValue(ASTSubstructure):
             match node:
                 case BoolOp(
                     op=op,
-                    values=[
-                        Compare(left=Name(id=n1), ops=[op1], comparators=[v1]),
-                        Compare(left=Name(id=n2), ops=[op2], comparators=[v2]),
-                    ]
-                ) if (n1 == n2
-                      and ((isinstance(op, And)
-                            and ((type(op1), type(op2)) in cls._inequalities))
-                           or (isinstance(op, Or)
-                               and isinstance(op1, Eq)
-                               and isinstance(op2, Eq)))
-                      and are_negated_unary_expressions(v1, v2)):
-                    yield cls._make_match(node, node)
+                    values=[Compare(Name(n1), [op1], [v1]),
+                            Compare(Name(n2), [op2], [v2])]
+                ) if (n1 == n2 and negated_unary(v1, v2)):
+                    if (
+                            isinstance(op, Or)
+                            and isinstance(op1, Eq)
+                            and isinstance(op2, Eq)
+                    ):
+                        yield cls._make_match(node)
+                    if (
+                            isinstance(op, And)
+                            and (type(op1), type(op2)) in cls._inequalities
+                    ):
+                        yield cls._make_match(node)
 
 
 class RepeatedAddition(ASTSubstructure):
@@ -393,7 +350,7 @@ class RepeatedAddition(ASTSubstructure):
         for node in nodes_of_class(module, BinOp):
             if node not in visited and is_repeated_add(node):
                 visited.update(nodes_of_class(node, BinOp))
-                yield cls._make_match(node, node)
+                yield cls._make_match(node)
 
 
 class RepeatedMultiplication(ASTSubstructure):
@@ -407,7 +364,7 @@ class RepeatedMultiplication(ASTSubstructure):
         for node in nodes_of_class(module, BinOp):
             if node not in visited and is_repeated_multiplication(node):
                 visited.update(nodes_of_class(node, BinOp))
-                yield cls._make_match(node, node)
+                yield cls._make_match(node)
 
 
 class RedundantArithmetic(ASTSubstructure):
@@ -416,26 +373,20 @@ class RedundantArithmetic(ASTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        # ToDo - Evaluate the inclusion of unary add. It may be too
-        #  presumptuous to flag as redundant
-        for node in nodes_of_class(module, (BinOp, UnaryOp)):
+        for node in nodes_of_class(module, BinOp):
+            match (node.left, node.op, node.right):
+                case ((Constant(0), Add(), _)
+                      | (_, Add(), Constant(0))
+                      | (Constant(1), Mult(), _)
+                      | (_, Mult(), Constant(1))
+                      | (_, Div(), Constant(1))):
+                    yield cls._make_match(node)
+                case (Name(n1), Div(), Name(n2)) if n1 == n2:
+                    yield cls._make_match(node)
+        for node in nodes_of_class(module, UnaryOp):
             match node:
-                case BinOp(
-                    left=l,
-                    op=op,
-                    right=r
-                ):
-                    match (op, l, r):
-                        case ((Add(), Constant(0), _)
-                              | (Add(), _, Constant(0))
-                              | (Mult(), Constant(1), _)
-                              | (Mult(), _, Constant(1))
-                              | (Div(), _, Constant(1))):
-                            yield cls._make_match(node, node)
-                        case (Div(), Name(id=n1), Name(id=n2)) if n1 == n2:
-                            yield cls._make_match(node, node)
                 case UnaryOp(op=UAdd()):
-                    yield cls._make_match(node, node)
+                    yield cls._make_match(node)
 
 
 class RedundantNot(ASTSubstructure):
@@ -446,13 +397,147 @@ class RedundantNot(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, UnaryOp):
             match node:
-                case UnaryOp(
-                    op=Not(),
-                    operand=Compare(),
-                ):
-                    yield cls._make_match(node, node)
+                case UnaryOp(Not(), Compare()):
+                    yield cls._make_match(node)
 
 
 # pylint x == 'a' or x == 'b' covered by R1714
 # pylint for i in range covered by C0200 ?
 # pylint x = x covered by self-assigning-variable (W0127)
+
+_COMPLIMENT_OPS = {
+    Eq: NotEq,
+    Lt: GtE,
+    LtE: Gt,
+    Is: IsNot,
+    In: NotIn,
+}
+_COMPLIMENT_OPS |= {v: k for k, v in _COMPLIMENT_OPS.items()}
+
+
+def nodes_of_class(node: AST, cls: type | tuple[type, ...]) -> Iterable:
+    """
+    Yields nodes in the AST walk of the given cls type. Order is not guaranteed.
+    """
+    for child in walk(node):
+        if isinstance(child, cls):
+            yield child
+
+
+def _dump(nodes: AST | Iterable[AST]):
+    if isinstance(nodes, AST):
+        nodes = [nodes]
+    return "\n".join(dump(n) for n in nodes)
+
+
+def equals(node1: AST | Iterable[AST],
+           node2: AST | Iterable[AST]):
+    return _dump(node1) == _dump(node2)
+
+
+def compliments(ex1, ex2):
+    return (compliment_compares(ex1, ex2)
+            or compliment_unary(ex1, ex2))
+
+
+def compliment_compares(cmp1: Compare, cmp2: Compare):
+    match (cmp1, cmp2):
+        # e.g. x < 5 compliments x >= 5
+        case (
+            Compare(left=l1, comparators=c1, ops=[o1]),
+            Compare(left=l2, comparators=c2, ops=[o2]),
+        ) if (equals(l1, l2) and equals(c1, c2) and compliment_ops(o1, o2)):
+            return True
+        # e.g. x < 5 == True compliments x < 5 == False
+        case (
+            Compare(left=l1, comparators=[*r1, Constant(value=v1)], ops=ops1),
+            Compare(left=l2, comparators=[*r2, Constant(value=v2)], ops=ops2),
+        ) if (equals([l1, *r1], [l2, *r2])
+              and equals(ops1, ops2)
+              and compliment_bools(v1, v2)):
+            return True
+        # e.g. x % 2 == 0 compliments x % 2 == 1
+        case (
+            Compare(left=BinOp(op=Mod(), right=Constant(2)) as l1,
+                    ops=[Eq()],
+                    comparators=[Constant(value=c1)]),
+            Compare(left=BinOp(op=Mod(), right=Constant(2)) as l2,
+                    ops=[Eq()],
+                    comparators=[Constant(value=c2)])
+        ) if (equals(l1, l2) and {c1, c2} == {0, 1}):
+            return True
+    return False
+
+
+def compliment_ops(op1, op2):
+    return type(op1) == _COMPLIMENT_OPS[type(op2)]
+
+
+def compliment_unary(ex1, ex2):
+    match ex1:
+        case UnaryOp(op=Not(), operand=inv_ex1) if equals(ex2, inv_ex1):
+            return True
+    match ex2:
+        case UnaryOp(op=Not(), operand=inv_ex2) if equals(ex1, inv_ex2):
+            return True
+    return False
+
+
+def negated_unary(ex1, ex2):
+    match ex1:
+        case UnaryOp(op=USub(), operand=neg_ex1) if equals(neg_ex1, ex2):
+            return True
+    match ex2:
+        case UnaryOp(op=USub(), operand=neg_ex2) if equals(ex1, neg_ex2):
+            return True
+    return False
+
+
+def compliment_bools(v1, v2):
+    """Returns true if v1 and v2 are both bools and not equal"""
+    return isinstance(v1, bool) and isinstance(v2, bool) and v1 != v2
+
+
+def is_nop(node):
+    match node:
+        case Expr(Constant() | Name()) | Pass():
+            return True
+        case Assign([Name(n1)], Name(n2)) if n1 == n2:
+            return True
+    return False
+
+
+def match_ends(nodes1: list[AST], nodes2: list[AST]):
+    for i, (elt1, el2) in enumerate(zip(reversed(nodes1), reversed(nodes2))):
+        if not equals(elt1, el2):
+            return i
+    return min(len(nodes1), len(nodes2))
+
+
+_DOUBLE_WEIGHTED_NODES = (
+    operator,
+    boolop,
+    unaryop,
+    cmpop,
+)
+_SINGLE_WEIGHTED_NODES = (
+    Name,
+    Constant,
+)
+
+
+def weight(node):
+    weight = 2 * len(list(nodes_of_class(node, _DOUBLE_WEIGHTED_NODES)))
+    weight += len(list(nodes_of_class(node, _SINGLE_WEIGHTED_NODES)))
+    return weight
+
+
+def is_repeated_add(node: BinOp):
+    code = unparse(node)
+    return re.search(r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \+ \1)+', code) is not None
+
+
+def is_repeated_multiplication(node: BinOp):
+    code = unparse(node)
+    regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \* \1){2,}'
+    return re.search(regex, code) is not None
