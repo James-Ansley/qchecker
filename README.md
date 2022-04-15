@@ -11,17 +11,14 @@ A simple library for finding statement-level substructures
 
 > qChecker is still in alpha and significant API changes are likely
 
-Currently, subclasses of `qchecker.Substructure` define structure names,
-descriptions, and an `iter_matches` class method which iterates
-over `qchecker.TextRange`s that match the pattern defined by the
-Substructure's `technical_description`.
+Currently, concrete subclasses of `qchecker.Substructure` define
+an `iter_matches` class method which iterates over `qchecker.match.Match`
+objects identifying where in the code those particular substructures occur.
 
 For example:
 
 ```python
-import ast
-
-from qchecker import IfElseReturnBool
+from qchecker.substructures import IfElseReturnBool
 
 code = """
 class Foo:
@@ -35,19 +32,16 @@ class Foo:
             return False
 """.strip()
 
-module = ast.parse(code)
-matches = IfElseReturnBool.iter_matches(module)
+matches = IfElseReturnBool.iter_matches(code)
 print(IfElseReturnBool.technical_description)
 print(*matches, sep="\n")
 ```
 
 would print the `technical_description` of the `IfElseReturnBool` Substructure
-followed by a `TextRange` with the start and end line numbers and column offsets
-of the structure in the `code` string.
+followed by a `Match` object containing the mane of the pattern matched, the
+description, and the `TextRange` where the pattern occurs.
 
 ```
 If(..)[Return bool] Else[Return !bool]
-TextRange(6,8->9,24)
+Match("If/Else Return Bool", "Looks like you are returning two [...]", TextRange(6,8->9,24))
 ```
-
-A `SUBSTRUCTURES` list provides the list of all subclasses of `Substructure`.
