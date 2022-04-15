@@ -667,49 +667,49 @@ def test_redundant_not(line, should_match):
     assert (match is not None) == should_match
     if should_match:
         assert match.text_range == TextRange(1, 0, 1, len(line))
-#
-#
-# def test_confusing_else():
-#     code = dedent('''
-#     def foo(x):
-#         if x < 5:
-#             print('x is small')
-#         else:
-#             if x < 10:
-#                 print('x is medium')
-#             else:
-#                 print('x is large')
-#
-#     def bar(x):
-#         if x < 5:
-#             print('x is small')
-#         elif x < 10:
-#             print('x is medium')
-#         else:
-#             print('x is large')
-#     ''')
-#     match, = ConfusingElse.iter_matches(code)
-#     assert match.text_range == TextRange(6, 8, 9, 31)
-#
-#
-# def test_else_if():
-#     code = dedent('''
-#     def foo(x):
-#         if x > 10:
-#             return 'Big'
-#         else:
-#             if x > 5:
-#                 return 'med'
-#         return 'small'
-#
-#     def foo(x):
-#         # No match
-#         if x > 10:
-#             return 'Big'
-#         elif x > 5:
-#             return 'med'
-#         else:
-#             return 'small'
-#     ''')
-#     match, = ElseIf.iter_matches(code)
-#     assert match.text_range == TextRange(5, 4, 6, 16)
+
+
+def test_confusing_else():
+    code = dedent('''
+    def foo(x):
+        if x < 5:
+            print('x is small')
+        else:
+            if x < 10:
+                print('x is medium')
+            else:
+                print('x is large')
+
+    def bar(x):
+        if x < 5:
+            print('x is small')
+        elif x < 10:
+            print('x is medium')
+        else:
+            print('x is large')
+    ''')
+    match, = ConfusingElse.iter_matches(code)
+    assert match.text_range == TextRange(6, 8, 9, 31)
+
+
+def test_else_if():
+    code = dedent('''
+    def foo(x):
+        if x > 10:
+            return 'Big'
+        else:
+            if x > 5:
+                return 'med'
+        return 'small'
+
+    def foo(x):
+        # No match
+        if x > 10:
+            return 'Big'
+        elif x > 5:
+            return 'med'
+        else:
+            return 'small'
+    ''')
+    match, = ElseIf.iter_matches(code)
+    assert match.text_range == TextRange(5, 4, 6, 16)

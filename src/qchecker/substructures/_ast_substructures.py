@@ -30,6 +30,26 @@ __all__ = [
     'RedundantNot',
 ]
 
+_DOUBLE_WEIGHTED_NODES = (
+    operator,
+    boolop,
+    unaryop,
+    cmpop,
+)
+_SINGLE_WEIGHTED_NODES = (
+    Name,
+    Constant,
+)
+
+_COMPLIMENT_OPS = {
+    Eq: NotEq,
+    Lt: GtE,
+    LtE: Gt,
+    Is: IsNot,
+    In: NotIn,
+}
+_COMPLIMENT_OPS |= {v: k for k, v in _COMPLIMENT_OPS.items()}
+
 
 class ASTSubstructure(Substructure, abc.ABC):
     @classmethod
@@ -405,15 +425,6 @@ class RedundantNot(ASTSubstructure):
 # pylint for i in range covered by C0200 ?
 # pylint x = x covered by self-assigning-variable (W0127)
 
-_COMPLIMENT_OPS = {
-    Eq: NotEq,
-    Lt: GtE,
-    LtE: Gt,
-    Is: IsNot,
-    In: NotIn,
-}
-_COMPLIMENT_OPS |= {v: k for k, v in _COMPLIMENT_OPS.items()}
-
 
 def nodes_of_class(node: AST, cls: type | tuple[type, ...]) -> Iterable:
     """
@@ -512,18 +523,6 @@ def match_ends(nodes1: list[AST], nodes2: list[AST]):
         if not equals(elt1, el2):
             return i
     return min(len(nodes1), len(nodes2))
-
-
-_DOUBLE_WEIGHTED_NODES = (
-    operator,
-    boolop,
-    unaryop,
-    cmpop,
-)
-_SINGLE_WEIGHTED_NODES = (
-    Name,
-    Constant,
-)
 
 
 def weight(node):
