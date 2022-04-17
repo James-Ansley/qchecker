@@ -3,6 +3,7 @@ markup = 'markdown'
 content = '''
 Looks like you have an unnecessary Elif condition.
 It might be better in this case to just use an Else.
+
 For example, instead of:
 ```python
 if x < 5:
@@ -39,6 +40,7 @@ markup = 'markdown'
 content = '''
 Looks like you are returning two booleans inside of an If/Else statement.
 It might be better if you just return the If condition or its inverse.
+
 For example, instead of:
 ```python
 if x < 5:
@@ -70,6 +72,7 @@ content = '''
 Looks like you are returning the result of some conditional check with
 boolean literals.
 It might be better in this case to just return the condition itself.
+
 For example, instead of:
 ```python
 if x < 5:
@@ -94,11 +97,76 @@ return x % 2 == 1
 
 [IfElseAssignReturn]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like you are returning one of two or more values based on a condition
+after assigning the return result to a variable.
+It might be better in this case to just return the values inside the
+if-statement blocks.
+
+For example, instead of:
+
+```python
+def get_status(code):
+    if code == 200:
+        result = "OK"
+    else:
+        result = "ERR"
+    return result
+```
+
+Consider doing this:
+
+```python
+def get_status(code):
+    if code == 200:
+        return "OK"
+    else:
+        return "ERR"
+```
+'''
 
 [IfElseAssignBoolReturn]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like you are returning the result of some conditional check by assigning a
+boolean return value to a variable.
+It might be better in this case to just return the condition itself.
+
+For example, instead of:
+```python
+def is_small(x):
+    if x < 5:
+        value_is_small = True
+    else:
+        value_is_small = False
+    return value_is_small
+```
+
+Consider doing this:
+
+```python
+def is_small(x):
+    return x < 5
+```
+
+Or, instead of:
+
+```python
+def is_valid(value):
+    if value is None:
+        valid = False
+    else:
+        valid = True
+    return valid
+```
+
+Consider doing this:
+
+```python
+def is_valid(value):
+    return value is not None
+```
+'''
 
 [IfElseAssignBool]
 markup = 'markdown'
@@ -169,5 +237,13 @@ markup = 'markdown'
 content = ''''''  # ToDo - Add Description
 
 [RedundantIndexedFor]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[RedundantComparison]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[MergeableEqual]
 markup = 'markdown'
 content = ''''''  # ToDo - Add Description
