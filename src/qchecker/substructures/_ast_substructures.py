@@ -28,6 +28,8 @@ __all__ = [
     'RepeatedMultiplication',
     'RedundantArithmetic',
     'RedundantNot',
+    'RedundantComparison',
+    'MergeableEqual',
 ]
 
 _DOUBLE_WEIGHTED_NODES = (
@@ -421,7 +423,39 @@ class RedundantNot(ASTSubstructure):
                     yield cls._make_match(node)
 
 
-# pylint x == 'a' or x == 'b' covered by R1714
+class RedundantComparison(ASTSubstructure):
+    name = 'Redundant Comparison'
+    technical_description = 'expr == bool'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, Compare):
+            match node:
+                case (Compare(left=Constant(val), ops=[Eq(), *_])
+                      | Compare(ops=[*_, Eq()], comparators=[*_, Constant(val)])
+                ) if isinstance(val, bool):
+                    yield cls._make_match(node)
+
+
+class MergeableEqual(ASTSubstructure):
+    # covered by Pylint-R1714
+    name = 'Mergeable Equal'
+    technical_description = 'name == value or name == other_value'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        # ToDo – Consider chains of more than two
+        for node in nodes_of_class(module, BoolOp):
+            match node:
+                case BoolOp(
+                    op=Or(),
+                    values=[
+                        Compare(Name(n1), [Eq()], [_]),
+                        Compare(Name(n2), [Eq()], [_])
+                    ]
+                ) if (n1 == n2):
+                    yield cls._make_match(node)
+
 # pylint for i in range covered by C0200 ?
 # pylint x = x covered by self-assigning-variable (W0127)
 

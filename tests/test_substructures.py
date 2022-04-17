@@ -713,3 +713,43 @@ def test_else_if():
     ''')
     match, = ElseIf.iter_matches(code)
     assert match.text_range == TextRange(5, 4, 6, 16)
+
+
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('(x < 5) == True', True),
+     ('(x == 5) == False', True),
+     ('(x is not y) == True', True),
+     ('foo(x) == True', True),
+     ('seq[3] == True', True),
+     ('seq[3] == False', True),
+     ('True == (x < 5)', True),
+     ('False == (x == 5)', True),
+     ('True == (x is not y)', True),
+     ('True == foo(x)', True),
+     ('True == seq[3]', True),
+     ('False == seq[3]', True),
+     ('x is True', False),
+     ('True is x', False))
+)
+def test_redundant_comparison(line, should_match):
+    match = next(RedundantComparison.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line))
+
+
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('x == 5 or x == 4', True),
+     ('x == "a" or x == "b"', True),
+     ('x == "a" or x == 3', True),
+     ('x == "a" and x == 3', False),
+     ('x == 2 or y == 3', False),
+     ('x == 2 and y == 3', False))
+)
+def test_mergeable_equal(line, should_match):
+    match = next(MergeableEqual.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line))
