@@ -8,10 +8,16 @@ from qchecker.descriptions import Description
 
 @dataclass
 class TextRange:
-    from_line: int
-    from_offset: int
-    to_line: int
-    to_offset: int
+    def __init__(
+            self,
+            from_line: int,
+            from_offset: int,
+            to_line: int = None,
+            to_offset: int = None):
+        self.from_line = from_line
+        self.from_offset = from_offset
+        self.to_line = to_line if to_line is not None else from_line
+        self.to_offset = to_offset if to_offset is not None else -1
 
     def contains(self, other: 'TextRange'):
         this_from = (self.from_line, self.from_offset)
@@ -21,10 +27,13 @@ class TextRange:
         return this_from <= other_from and this_to >= other_to
 
     def grab_range(self, code):
-        lines = code.splitlines()
+        lines = code.split('\n')
         code_range = lines[self.from_line-1:self.to_line]
         code_range[0] = code_range[0][self.from_offset:]
-        code_range[-1] = code_range[-1][:self.to_offset]
+        if len(code_range) > 1:
+            code_range[-1] = code_range[-1][:self.to_offset]
+        else:
+            code_range[-1] = code_range[-1][:self.to_offset - self.from_offset]
         return '\n'.join(code_range)
 
     def __repr__(self):

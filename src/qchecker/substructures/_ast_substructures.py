@@ -151,6 +151,7 @@ class IfElseAssignBoolReturn(ASTSubstructure):
 
 
 class IfElseAssignReturn(ASTSubstructure):
+    # ToDo - Check if/elif*/else?
     name = "If/Else Assign Return"
     technical_description = "If(..)[name=..] Else[name=..], Return name"
     subsets = [IfElseAssignBoolReturn]
@@ -240,7 +241,9 @@ class UnnecessaryElse(ASTSubstructure):
         for node in nodes_of_class(module, If):
             match node:
                 case If(body=b1, orelse=b2) if (
-                        match_ends(b1, b2) == len(b2) and not equals(b1, b2)
+                        match_ends(b1, b2) == len(b2)
+                        and len(b2) >= 1
+                        and not equals(b1, b2)
                 ):
                     yield cls._make_match(node)
 
