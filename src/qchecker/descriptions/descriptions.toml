@@ -170,15 +170,120 @@ def is_valid(value):
 
 [IfElseAssignBool]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like you are trying to assign the result of a condition to a variable
+in an if/else.
+In this case, it might just be best to assign the result of the condition or
+its inverse to the variable directly.
+
+For example, instead of:
+
+```python
+if x > 10:
+    is_big = True
+else:
+    is_big = False
+```
+
+Consider doing this:
+
+```python
+is_big = x > 10
+```
+
+Or, instead of:
+
+```python
+if len(my_list) > 0:
+    is_empty = False
+else:
+    is_empty = True
+```
+
+Consider doing this:
+
+```python
+is_empty = len(my_list) == 0
+```
+'''
 
 [EmptyIfBody]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like the body of this if statement isn't doing anything.
+Consider removing it.
+
+For example, instead of:
+
+```python
+if x > 0:
+    x = x
+else:
+    x = 0
+```
+
+Consider doing this:
+
+```python
+if x < 0:
+    x = 0
+```
+
+Or, instead of:
+
+```python
+if x > 10:
+    pass
+else:
+    x = 10
+```
+
+Consider doing this:
+
+```python
+if x <= 10:
+    x = 10
+```
+'''
 
 [EmptyElseBody]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like the body of this else statement isn't doing anything.
+Consider removing it.
+
+For example, instead of:
+
+```python
+if x < 0:
+    x = 0
+else:
+    x = x
+```
+
+Consider doing this:
+
+```python
+if x < 0:
+    x = 0
+```
+
+Or, instead of:
+
+```python
+if x <= 10:
+    x = 10
+else:
+    pass
+```
+
+Consider doing this:
+
+```python
+if x <= 10:
+    x = 10
+```
+'''
 
 [NestedIf]
 markup = 'markdown'
