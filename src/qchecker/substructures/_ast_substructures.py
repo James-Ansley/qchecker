@@ -30,6 +30,8 @@ __all__ = [
     'RedundantNot',
     'RedundantComparison',
     'MergeableEqual',
+    'RedundantFor',
+    # 'WhileAsFor',
 ]
 
 _DOUBLE_WEIGHTED_NODES = (
@@ -67,7 +69,7 @@ class ASTSubstructure(Substructure, abc.ABC):
         """Iterates over matches found in the AST"""
 
     @classmethod
-    def match_collides_with_subset(cls, module, match):
+    def _match_collides_with_subset(cls, module, match):
         matches = chain(*(sub_struct.iter_matches(module)
                           for sub_struct in cls.subsets))
         return any(submatch.text_range.contains(match.text_range)
@@ -173,7 +175,7 @@ class IfElseAssignReturn(ASTSubstructure):
                     Return(Name(id=n3)) as end,
                 ] if (n1 == n2 == n3):
                     match = cls._make_match(start, end)
-                    if not cls.match_collides_with_subset(module, match):
+                    if not cls._match_collides_with_subset(module, match):
                         yield match
 
 
@@ -191,7 +193,7 @@ class IfElseAssignBool(ASTSubstructure):
                     orelse=[Assign([Name(n2)], Constant(v2))],
                 ) if (n1 == n2 and compliment_bools(v1, v2)):
                     match = cls._make_match(node)
-                    if not cls.match_collides_with_subset(module, match):
+                    if not cls._match_collides_with_subset(module, match):
                         yield match
 
 
@@ -228,7 +230,7 @@ class NestedIf(ASTSubstructure):
         for node in nodes_of_class(module, If):
             match node:
                 case If(body=[If(orelse=[]) as inner]):
-                    yield cls._make_match(inner)
+                    yield cls._make_match(node, inner)
 
 
 class UnnecessaryElse(ASTSubstructure):
@@ -293,14 +295,17 @@ class DuplicateIfElseBody(ASTSubstructure):
 
 
 class AugmentableAssignment(ASTSubstructure):
+    # ToDo – Flag as cautionary, in many cases it may be impossible to know
+    #  *for certain* whether this can be flagged automatically.
+    #  Depending on type, objects may not have augmented operations and so
+    #  should infer type if possible and ignore cases where type cannot
+    #  be inferred
     name = "Augmentable Assignment"
     technical_description = "name = name Op() .. | .. [+*] name"
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, Assign):
-            # ToDo – depending on type may not have augmented operations
-            #   Should infer type if possible
             match node:
                 case Assign(
                     targets=[Name(n1)],
@@ -316,6 +321,8 @@ class AugmentableAssignment(ASTSubstructure):
 
 
 class DuplicateExpression(ASTSubstructure):
+    # ToDo - This is a smell not a pattern
+    #  – should be removed for automated feedback
     name = "Duplicate Expression"
     technical_description = (
         "Module contains two expressions with more than 8 names, literals, "
@@ -409,12 +416,15 @@ class RedundantArithmetic(ASTSubstructure):
                 case (Name(n1), Div(), Name(n2)) if n1 == n2:
                     yield cls._make_match(node)
         for node in nodes_of_class(module, UnaryOp):
+            # ToDo - check if there are weird edge cases that make
+            #  this unnecessary
             match node:
                 case UnaryOp(op=UAdd()):
                     yield cls._make_match(node)
 
 
 class RedundantNot(ASTSubstructure):
+    # ToDo - check if there are weird edge cases that make this unnecessary
     name = 'Redundant Not'
     technical_description = 'not Compare'
 
@@ -427,6 +437,8 @@ class RedundantNot(ASTSubstructure):
 
 
 class RedundantComparison(ASTSubstructure):
+    # ToDo - This TECHNICALLY might not count as an antipattern.
+    #  Should check in the future
     name = 'Redundant Comparison'
     technical_description = 'expr == bool'
 
@@ -447,7 +459,8 @@ class MergeableEqual(ASTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        # ToDo – Consider chains of more than two
+        # ToDo - Consider chains of more than two
+        # ToDo - consider value == name as well
         for node in nodes_of_class(module, BoolOp):
             match node:
                 case BoolOp(
@@ -459,17 +472,59 @@ class MergeableEqual(ASTSubstructure):
                 ) if (n1 == n2):
                     yield cls._make_match(node)
 
-# pylint for i in range covered by C0200 ?
-# pylint x = x covered by self-assigning-variable (W0127)
+
+class RedundantFor(ASTSubstructure):
+    name = 'Redundant For'
+    technical_description = 'for _ in range(1|0):'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, For):
+            match node:
+                case For(
+                    iter=Call(func=Name(id='range'), args=[Constant(v)]) as end
+                ) if v == 0 or v == 1:
+                    yield cls._make_match(node, end)
 
 
-def nodes_of_class(node: AST, cls: type | tuple[type, ...]) -> Iterable:
+# class WhileAsFor(ASTSubstructure):
+#     # Notes: does not consider names within calls.
+#     # ToDo - Does not consider mutable types – might lead to weird behaviour
+#     name = 'While as For'
+#     technical_description = "while(compare(...)):... " \
+#                             "- where exactly one variable from the compare " \
+#                             "is updated in the body, and it is updated by " \
+#                             "a constant amount"
+#
+#     @classmethod
+#     def _iter_matches(cls, module: Module) -> Iterator[Match]:
+#         for node in nodes_of_class(module, While):
+#             match node:
+#                 case While(
+#                     test=Compare() as cmp,
+#                     body=body,
+#                 ):
+#                     names = nodes_of_class(cmp, Name, excluding=Call)
+#                     ids = {name.id for name in names}
+
+
+
+
+def nodes_of_class(
+        node: AST,
+        cls: type | tuple[type, ...],
+        *,
+        excluding: type | tuple[type, ...] = tuple(),
+) -> Iterable:
     """
     Yields nodes in the AST walk of the given cls type. Order is not guaranteed.
+    Does not include nodes that are the children of nodes of type excluding.
     """
-    for child in walk(node):
-        if isinstance(child, cls):
-            yield child
+    if isinstance(node, cls):
+        yield node
+    for child in iter_child_nodes(node):
+        if not isinstance(child, excluding):
+            yield from nodes_of_class(child, cls, excluding=excluding)
 
 
 def _dump(nodes: AST | Iterable[AST]):
@@ -550,6 +605,7 @@ def is_nop(node):
     match node:
         case Expr(Constant() | Name()) | Pass():
             return True
+        # pylint x = x covered by self-assigning-variable (W0127)
         case Assign([Name(n1)], Name(n2)) if n1 == n2:
             return True
     return False
@@ -569,11 +625,24 @@ def weight(node):
 
 
 def is_repeated_add(node: BinOp):
+    # ToDo – Do this in a better way
     code = unparse(node)
-    return re.search(r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \+ \1)+', code) is not None
+    regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \+ \1)+'
+    return re.search(regex, code) is not None
 
 
 def is_repeated_multiplication(node: BinOp):
+    # ToDo – Do this in a better way
     code = unparse(node)
     regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \* \1){2,}'
     return re.search(regex, code) is not None
+
+
+def is_updated(name_id: str, block: list[AST]):
+    updated_names = (
+        updated_name
+        for stmt in block
+        for updated_name in nodes_of_class(stmt, Name, excluding=Call)
+        if name_id == updated_name.id and isinstance(updated_name.ctx, Store)
+    )
+    return next(updated_names, None) is not None

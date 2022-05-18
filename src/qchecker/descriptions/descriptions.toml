@@ -58,7 +58,7 @@ Or, instead of:
 if x % 2 == 0:
     return False
 else:
-    Return True
+    return True
 ```
 Consider doing this:
 ```python
@@ -287,7 +287,60 @@ if x <= 10:
 
 [NestedIf]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like you are trying to test a complex condition by nesting two `if`
+-statements inside one another. In this case, it might be better to just use
+the `and` operator to combine the conditions into one `if`-statement.
+
+For example, instead of:
+
+```python
+if x > 0:
+    if y > 0:
+        print('Point is valid')
+```
+
+Consider doing this:
+
+```python
+if x > 0 and y > 0:
+    print('Point is valid')
+```
+
+Or, instead of this:
+
+```python
+if not command.isspace():
+    if command.upper() == 'W':
+        jump()
+```
+
+Consider doing this:
+
+```python
+if not command.isspace() and command.upper() == 'W':
+    jump()
+```
+
+If your conditions are long, you can always surround them with brackets and put
+them on multiple lines:
+
+```python
+if (not command.isspace()
+        and command.upper() == 'W'):
+    jump()
+```
+
+Or, you can extract the individual conditions or parts of conditions into
+variables:
+
+```python
+is_valid = not command.isspace()
+command = command.upper()
+if is_valid and command == 'W':
+    jump()
+```
+'''  # ToDo - Come up with better examples
 
 [ConfusingElse]
 markup = 'markdown'
@@ -295,7 +348,36 @@ content = ''''''  # ToDo - Add Description
 
 [UnnecessaryElse]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like the code at the end of this if block is the same as the entire
+else block!
+This means in either case, the same code will be run regardless of whether the
+if-condition is True or False.
+In this case, it might be better to remove this duplicate code by moving it
+outside of the if and else block.
+
+For example, instead of:
+```python
+if x < 5:
+    x = 5
+    do_something(x)
+    print('Done!')
+else:
+    do_something(x)
+    print('Done!')
+```
+
+Consider doing this:
+```python
+if x < 5:
+    x = 5
+do_something(x)
+print("Done!")
+```
+
+Here, the duplicate lines `do_something(x)` and `print("Done!")` were moved
+outside the if and else block.
+'''
 
 [DuplicateIfElseStatement]
 markup = 'markdown'
@@ -311,7 +393,34 @@ content = ''''''  # ToDo - Add Description
 
 [AugmentableAssignment]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like you are writting an assignment to a varaible that could be written
+as an _augmented assignment_.
+
+For example, instead of:
+
+```python
+x = x + 1
+```
+
+Consider using:
+
+```python
+x += 1
+```
+
+Or, Instead of:
+
+```python
+value = value // 3
+```
+
+Consider using:
+
+```python
+value //= 3
+```
+'''
 
 [DuplicateExpression]
 markup = 'markdown'
@@ -347,8 +456,43 @@ content = ''''''  # ToDo - Add Description
 
 [RedundantComparison]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It seems like you are comparing the result of some Boolean condition with a
+`True` or `False` literal value.
+This is generally redundant in Python and can usually be removed.
+
+For example, instead of:
+
+```python
+if word.isalpha() == True:
+    ...
+```
+
+Consider doing:
+
+```python
+if word.isalpha():
+    ...
+    
+Or, instead of doing:
+
+```python
+if word.isspace() == False:
+    ...
+```
+
+Consider doing:
+
+```python
+if not word.isspace():
+    ...
+```
+'''
 
 [MergeableEqual]
+markup = 'markdown'
+content = ''''''  # ToDo - Add Description
+
+[RedundantFor]
 markup = 'markdown'
 content = ''''''  # ToDo - Add Description

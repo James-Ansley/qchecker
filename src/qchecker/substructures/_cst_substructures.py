@@ -19,12 +19,15 @@ class CSTSubstructure(Substructure, abc.ABC):
         # All problems in computer science
         # can be solved by another level of indirection.
         module = MetadataWrapper(parse_module(code))
-        yield from cls._iter_matches(module)
+        try:
+            yield from cls._iter_matches(module)
+        except ParserSyntaxError as e:
+            raise SyntaxError from e
 
     @classmethod
     @abc.abstractmethod
     def _iter_matches(cls, module: MetadataWrapper) -> Iterable[Match]:
-        """Iterates over matches found in the AST"""
+        """Iterates over matches found in the CST"""
 
     @classmethod
     def _make_match(cls, from_node, to_node, node_position_map):
@@ -60,6 +63,7 @@ class _Visitor(CSTVisitor):
 
 
 def visit(node, cls):
+    # ToDo – Do this in a better way
     visitor = _Visitor(cls)
     node.visit(visitor)
     return visitor.nodes, visitor.node_position_map

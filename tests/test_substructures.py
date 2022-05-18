@@ -373,7 +373,7 @@ def test_nested_if():
             print('small')
     ''')
     match, = NestedIf.iter_matches(code)
-    assert match.text_range == TextRange(4, 8, 5, 23)
+    assert match.text_range == TextRange(3, 4, 5, 23)
 
 
 def test_unnecessary_else():
@@ -753,3 +753,61 @@ def test_mergeable_equal(line, should_match):
     assert (match is not None) == should_match
     if should_match:
         assert match.text_range == TextRange(1, 0, 1, len(line))
+
+
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('for x in range(1):...', True),
+     ('for _ in range(1):...', True),
+     ('for x in range(0):...', True),
+     ('for _ in range(0):...', True),
+     ('for x in []:...', False),  # maybe check this
+     ('for x in [y]:...', False),  # maybe check this
+     ('for x in range(10):...', False),
+     ('for x in foo(1):...', False),
+     ('for x in foo(0):...', False),
+     ('for x in y:...', False))
+)
+def test_redundant_for(line, should_match):
+    match = next(RedundantFor.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line) - 4)
+
+
+# def test_while_as_for():
+#     code = dedent('''
+#     while x < 5:
+#         print('do something', y)
+#         x += 3
+#         print('do something', x)
+#
+#     while x < y:
+#         y = y - 1
+#         print('do something', x, y)
+#
+#     while x > 3 * y:
+#         print('do something', x, y)
+#         y = y + x // 10
+#
+#     # no match
+#     while x < y:
+#         y *= 3
+#         print('do something')
+#
+#     # no match
+#     while x < y:
+#         x += 1
+#         y += 1
+#         print('do something')
+#
+#     # no match
+#     while x < y:
+#         y = 2
+#         x += 3
+#         print('do something')
+#     ''')
+#     match1, match2, match3 = WhileAsFor.iter_matches(code)
+#     assert match1.text_range == TextRange(2, 0, 5, 25)
+#     assert match2.text_range == TextRange(7, 0, 9, 28)
+#     assert match3.text_range == TextRange(11, 0, 13, 28)

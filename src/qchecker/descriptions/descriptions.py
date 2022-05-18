@@ -28,12 +28,6 @@ class Description:
         return f'Description({self.markup}, "{self.content}")'
 
 
-def _set_default():
-    """Loads default descriptions. Called on module initialisation"""
-    with open(_DEFAULT_PATH, 'rb') as f:
-        append_description_from_toml(f)
-
-
 def append_descriptions(descriptions: dict[str, 'Description']) -> None:
     """
     Adds a path to a TOML file containing pattern descriptions which can then
@@ -94,4 +88,5 @@ def get_description(description_name: str) -> Description:
     return description
 
 
-_set_default()
+with open(_DEFAULT_PATH, 'rb') as f:
+    append_description_from_toml(f)

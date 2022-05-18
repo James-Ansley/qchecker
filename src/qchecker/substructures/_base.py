@@ -36,9 +36,18 @@ class Substructure(abc.ABC):
 
     @classmethod
     def count_matches(cls, code: str) -> int:
-        """Returns the number of matching substructures in the given module"""
+        """
+        Returns the number of matching substructures in the given module
+
+        :raises SyntaxError: If the given code cannot be parsed.
+        """
         return len(list(cls.iter_matches(code)))
 
     @classmethod
     def list_matches(cls, code: str):
+        """
+        Returns a list of all matching substructures in the given module
+
+        :raises SyntaxError: If the given code cannot be parsed.
+        """
         return list(cls.iter_matches(code))

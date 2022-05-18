@@ -1,11 +1,11 @@
 from inspect import isabstract as _isabstract
 
-from ._base import Substructure
 from ._ast_substructures import *
+from ._base import Substructure
 from ._cst_substructures import *
 
 
-def get_concrete_base_classes():
+def _get_concrete_substructures():
     q = [Substructure]
     while q:
         current = q.pop()
@@ -14,4 +14,4 @@ def get_concrete_base_classes():
         q.extend(current.__subclasses__())
 
 
-SUBSTRUCTURES = [*get_concrete_base_classes()]
+SUBSTRUCTURES = [*_get_concrete_substructures()]
