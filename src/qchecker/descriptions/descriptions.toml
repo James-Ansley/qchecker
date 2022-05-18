@@ -4,6 +4,8 @@ content = '''
 Looks like you have an unnecessary Elif condition.
 It might be better in this case to just use an Else.
 
+---
+
 For example, instead of:
 ```python
 if x < 5:
@@ -18,6 +20,8 @@ if x < 5:
 else:
     # do something else
 ```
+
+---
 
 Or, instead of:
 ```python
@@ -41,6 +45,8 @@ content = '''
 Looks like you are returning two booleans inside of an If/Else statement.
 It might be better if you just return the If condition or its inverse.
 
+---
+
 For example, instead of:
 ```python
 if x < 5:
@@ -52,6 +58,8 @@ Consider doing this:
 ```python
 return x < 5
 ```
+
+---
 
 Or, instead of:
 ```python
@@ -73,6 +81,8 @@ Looks like you are returning the result of some conditional check with
 boolean literals.
 It might be better in this case to just return the condition itself.
 
+---
+
 For example, instead of:
 ```python
 if x < 5:
@@ -83,6 +93,8 @@ Consider doing this:
 ```python
 return x < 5
 ```
+
+---
 
 Or, instead of:
 ```python
@@ -102,6 +114,8 @@ Looks like you are returning one of two or more values based on a condition
 after assigning the return result to a variable.
 It might be better in this case to just return the values inside the
 if-statement blocks.
+
+---
 
 For example, instead of:
 
@@ -132,6 +146,8 @@ Looks like you are returning the result of some conditional check by assigning a
 boolean return value to a variable.
 It might be better in this case to just return the condition itself.
 
+---
+
 For example, instead of:
 ```python
 def is_small(x):
@@ -148,6 +164,8 @@ Consider doing this:
 def is_small(x):
     return x < 5
 ```
+
+---
 
 Or, instead of:
 
@@ -176,6 +194,8 @@ in an if/else.
 In this case, it might just be best to assign the result of the condition or
 its inverse to the variable directly.
 
+---
+
 For example, instead of:
 
 ```python
@@ -190,6 +210,8 @@ Consider doing this:
 ```python
 is_big = x > 10
 ```
+
+---
 
 Or, instead of:
 
@@ -213,6 +235,8 @@ content = '''
 Looks like the body of this if statement isn't doing anything.
 Consider removing it.
 
+---
+
 For example, instead of:
 
 ```python
@@ -228,6 +252,8 @@ Consider doing this:
 if x < 0:
     x = 0
 ```
+
+---
 
 Or, instead of:
 
@@ -252,6 +278,8 @@ content = '''
 Looks like the body of this else statement isn't doing anything.
 Consider removing it.
 
+---
+
 For example, instead of:
 
 ```python
@@ -267,6 +295,8 @@ Consider doing this:
 if x < 0:
     x = 0
 ```
+
+---
 
 Or, instead of:
 
@@ -292,6 +322,8 @@ Looks like you are trying to test a complex condition by nesting two `if`
 -statements inside one another. In this case, it might be better to just use
 the `and` operator to combine the conditions into one `if`-statement.
 
+---
+
 For example, instead of:
 
 ```python
@@ -306,6 +338,8 @@ Consider doing this:
 if x > 0 and y > 0:
     print('Point is valid')
 ```
+
+---
 
 Or, instead of this:
 
@@ -356,6 +390,8 @@ if-condition is True or False.
 In this case, it might be better to remove this duplicate code by moving it
 outside of the if and else block.
 
+---
+
 For example, instead of:
 ```python
 if x < 5:
@@ -389,13 +425,36 @@ content = ''''''  # ToDo - Add Description
 
 [DuplicateIfElseBody]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like the body of this if and else block are exactly the same!
+This means the if-condition has no effect on what code actually gets run.
+Consider removing the if-statement altogether.
+
+---
+
+For example, instead of:
+```python
+if x < 5:
+    do_something(x)
+else:
+    do_something(x)
+```
+
+Consider doing:
+```python
+do_something(x)
+```
+
+The if-else can be removed completely!
+'''
 
 [AugmentableAssignment]
 markup = 'markdown'
 content = '''
 It looks like you are writting an assignment to a varaible that could be written
 as an _augmented assignment_.
+
+---
 
 For example, instead of:
 
@@ -408,6 +467,8 @@ Consider using:
 ```python
 x += 1
 ```
+
+---
 
 Or, Instead of:
 
@@ -461,6 +522,8 @@ It seems like you are comparing the result of some Boolean condition with a
 `True` or `False` literal value.
 This is generally redundant in Python and can usually be removed.
 
+---
+
 For example, instead of:
 
 ```python
@@ -473,6 +536,9 @@ Consider doing:
 ```python
 if word.isalpha():
     ...
+```
+
+---
     
 Or, instead of doing:
 
