@@ -111,3 +111,17 @@ functions:
 - `get_pylint_matches(code: str, errors: list[str] = None) -> list[Match]` which
   returns the matches detected by pylint. A list of pylint error codes can be
   provided to only detect those errors and ignore all others.
+
+# Citation
+
+If you use this software, please cite it as below:
+```text
+@software{finnie-ansley2022qchecker,
+    author = {Finnie-Ansley, James},
+    month = {5},
+    title = {{qChecker}},
+    url = {https://github.com/James-Ansley/qchecker},
+    version = {0.0.0a4},
+    year = {2022}
+}
+```
