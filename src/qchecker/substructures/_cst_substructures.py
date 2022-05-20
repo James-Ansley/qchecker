@@ -101,7 +101,7 @@ class ElseIf(CSTSubstructure):
                 case If(
                     orelse=Else(
                         body=IndentedBlock(body=[
-                            If(test=inner)
+                            If(test=inner, orelse=None)
                         ])
                     ) as orelse
                 ):

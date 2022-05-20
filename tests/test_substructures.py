@@ -711,6 +711,16 @@ def test_else_if():
             return 'med'
         else:
             return 'small'
+            
+    def foo(x):
+        # No match
+        if x > 10:
+            return 'Big'
+        else:
+            if x > 5:
+                return 'med'
+            else:
+                return 'small'
     ''')
     match, = ElseIf.iter_matches(code)
     assert match.text_range == TextRange(5, 4, 6, 16)

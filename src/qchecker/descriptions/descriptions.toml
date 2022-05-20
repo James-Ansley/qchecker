@@ -760,7 +760,7 @@ if x != 5:
 [ElseIf]
 markup = 'markdown'
 content = '''
-Looks like this else stement only contains and if statemeent.
+Looks like this else stement only contains an if statemeent.
 This can be simplified by instead using and elif statement.
 
 ---
@@ -861,6 +861,6 @@ for i in range(1):
 ```
 Consider doing:
 ```python
-do_something(i)
+do_something(1)
 ```
 '''
