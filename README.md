@@ -48,6 +48,7 @@ Match("If/Else Return Bool", "Looks like you are returning two [...]", TextRange
 
 A `SUBSTRUCTURES` constant is included in the `substructures` module that
 contains all substructures. This can be used, for example:
+
 ```python
 from qchecker.substructures import SUBSTRUCTURES
 
@@ -69,6 +70,7 @@ for match in matches:
 ```
 
 Which will produce the following matches:
+
 ```text
 Match("Redundant Comparison", "It seems like you are comparing [...]", TextRange(3,7->3,22))
 Match("Augmentable Assignment", "It looks like you are writting an [...]", TextRange(2,4->2,13))
@@ -89,3 +91,23 @@ import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 ```
+
+# Extras - Programmatic Flake8 and Pylint
+
+qchecker can be installed with support for programmatically running flake8 and
+pylint to generate match objects.
+
+Install qchecker with the extras "general_checks":
+
+```text
+pip install qchecker[general_checks]
+```
+
+This will allow you to import the `general` module of qchecker which reveals two
+functions:
+
+- `get_flake8_matches(code: str) -> list[Match]` which returns the matches
+  detected by flake8.
+- `get_pylint_matches(code: str, errors: list[str] = None) -> list[Match]` which
+  returns the matches detected by pylint. A list of pylint error codes can be
+  provided to only detect those errors and ignore all others.
