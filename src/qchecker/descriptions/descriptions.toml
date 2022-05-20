@@ -378,7 +378,32 @@ if is_valid and command == 'W':
 
 [ConfusingElse]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like you are nesting an if/else statement inside of an else block.
+This can make your code confusing to understand and can be simplified by using
+and if/elif/else statement.
+
+---
+
+For example, instead of:
+```python
+if age < 7:
+    ticket_pice = 0
+else:
+    if age < 50:
+        ticket_price = 24
+    else:
+        ticket_price = 12
+```
+
+Consider doing:
+if age < 7:
+    ticket_pice = 0
+elif age < 50:
+    ticket_price = 24
+else:
+    ticket_price = 12
+'''
 
 [UnnecessaryElse]
 markup = 'markdown'
@@ -559,7 +584,38 @@ It might be helpful to refactor these into a function that can be reused instead
 
 [MissedAbsoluteValue]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like you're making two comparisons that could be simplified by using the
+`abs` (absolute value) function.
+
+---
+
+For example, instead of doing:
+```python
+# Outside the range -5 to 5
+if x < -5 or x > 5:
+    ...
+```
+Consider doing:
+```python
+if abs(x) > 5:
+    ...
+```
+
+---
+
+Or, instead of this:
+```python
+# inside the range -5 to 5
+if x >= -5 and x <= 5:
+    ...
+```
+Consider doing:
+```python
+if abs(x) <= 5:
+    ...
+```
+'''
 
 [RepeatedAddition]
 markup = 'markdown'
@@ -583,7 +639,7 @@ y = 3 * x
 
 Or, instead of:
 ```python
-y = x * x
+y = x + x
 ```
 
 Consider doing:
@@ -594,23 +650,136 @@ y = 2 * x
 
 [RepeatedMultiplication]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like you are repeating the same addition unnecessarily.
+In this case, it might just be easier to use the power operator (`**`).
+
+---
+
+For example, instead of:
+```python
+y = x * x * x
+```
+
+Consider doing:
+```python
+y = x ** 3
+```
+
+---
+
+Or, instead of:
+```python
+y = x * x
+```
+
+Consider doing:
+```python
+y = x ** 2
+```
+'''
 
 [RedundantArithmetic]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It looks like this equation can be simplified.
+Adding 0, multiplying or dividing by 1, or a unary add (e.g. `+x`) do nothing
+and can just complicate your equations. So, it might be best to remove them.
+
+---
+
+For example, instead of:
+```python
+x = y + 0
+```
+
+Consider doing:
+```python
+x = y
+```
+
+---
+
+Or, instead of:
+```python
+x = y / 1
+```
+
+Consider doing:
+```python
+x = y
+```
+
+---
+
+Or, instead of:
+```python
+x = +y
+```
+
+Consider doing:
+```python
+x = y
+```
+'''
 
 [RedundantNot]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+It seems like this code is trying to negate (`not`) a comparison.
+This just adds extra complexity and can make the code confusing to read.
+Consider removing the not and inverting the comparison instead.
+
+---
+
+For example, instead of:
+```python
+if not (x < 5):
+    ...
+```
+Consider doing:
+```python
+if x >= 5:
+    ...
+```
+
+---
+
+Or, instead of:
+```python
+if not (x == 5):
+    ...
+```
+Consider doing:
+```python
+if x != 5:
+    ...
+```
+'''
 
 [ElseIf]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like this else stement only contains and if statemeent.
+This can be simplified by instead using and elif statement.
 
-[RedundantIndexedFor]
-markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+---
+
+For example, instead of:
+```python
+if 0 <= x < 5:
+    do_something(x)
+else :
+    if 5 <= x < 10:
+        do_something_else(x)
+```
+Consider doing:
+```python
+if 0 <= x < 5:
+    do_something(x):
+elif 5 <= x < 10:
+    do_something_else(x)
+'''
 
 [RedundantComparison]
 markup = 'markdown'
@@ -654,8 +823,44 @@ if not word.isspace():
 
 [MergeableEqual]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Looks like you're checking to see if a variable could be one of several values.
+This can be simplified using the `in` operator over a tuple of those values.
+
+---
+
+For example, instead of:
+```python
+if char == "w" or char == "a" or char == "s" or char == "d":
+    ...
+```
+Consider doing:
+```python
+if char in ("w", "a", "s", "d"):
+    ...
+```
+
+**Note:** This is not the same as writing `if char in "wasd": ...`.
+The `in` operator works slightly differently on strings than on tuples.
+In that case, char couuld be equal to "wa", or "asd" etc and still match because
+the string `in` operator matches substrings.
+'''
 
 [RedundantFor]
 markup = 'markdown'
-content = ''''''  # ToDo - Add Description
+content = '''
+Seems like this for loop is only running 0 or 1 times.
+It might be best to just remove the for loop.
+
+---
+
+For example, instead of:
+```python
+for i in range(1):
+    do_something(i)
+```
+Consider doing:
+```python
+do_something(i)
+```
+'''

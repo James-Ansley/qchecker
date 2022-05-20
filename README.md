@@ -45,3 +45,47 @@ description, and the `TextRange` where the pattern occurs.
 If(..)[Return bool] Else[Return !bool]
 Match("If/Else Return Bool", "Looks like you are returning two [...]", TextRange(6,8->9,24))
 ```
+
+A `SUBSTRUCTURES` constant is included in the `substructures` module that
+contains all substructures. This can be used, for example:
+```python
+from qchecker.substructures import SUBSTRUCTURES
+
+code = r'''
+def foo(x):
+    x = x + 1
+    if (x < 5) == True:
+        return True
+    else:
+        return False
+'''.strip()
+
+matches = []
+for substructure in SUBSTRUCTURES:
+    matches += substructure.iter_matches(code)
+
+for match in matches:
+    print(match)
+```
+
+Which will produce the following matches:
+```text
+Match("Redundant Comparison", "It seems like you are comparing [...]", TextRange(3,7->3,22))
+Match("Augmentable Assignment", "It looks like you are writting an [...]", TextRange(2,4->2,13))
+Match("If/Else Return Bool", "Looks like you are returning two [...]", TextRange(3,4->6,20))
+```
+
+### Note:
+
+The `DuplicateExpression` substructure is now deprecated and will be removed or
+moved in future versions. This substructure is also not in the `SUBSTRUCTURES`
+constant. A temporary `ALL_SUBSTRUCTURES` constant has been added that includes
+it along with all other substructures. A warning will show when trying to
+match `DuplicateExpression` substructures. To disable this, filter
+the `DeprecationWarning` warning type:
+
+```python
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+```

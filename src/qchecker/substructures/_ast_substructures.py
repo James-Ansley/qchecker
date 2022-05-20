@@ -24,7 +24,7 @@ __all__ = [
     'SeveralDuplicateIfElseStatements',
     'DuplicateIfElseBody',
     'AugmentableAssignment',
-    'DuplicateExpression',
+    'DuplicateExpression',  # Deprecated
     'MissedAbsoluteValue',
     'RepeatedAddition',
     'RepeatedMultiplication',
@@ -337,7 +337,6 @@ class DuplicateExpression(ASTSubstructure):
         "threshold to be annoying and unhelpful for anything larger than "
         "a simple function. Will be removed in future versions.",
         version="0.0.0a4",
-        action="once",
     )
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         # ToDo - Probably better if this just checks for a match in

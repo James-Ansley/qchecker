@@ -565,6 +565,7 @@ def test_augmentable_assignment():
         assert match.text_range == TextRange(i, 0, i, len(lines[i - 1]))
 
 
+@pytest.mark.filterwarnings('ignore')
 def test_duplicate_expression():
     code = dedent('''
     if x[i * 2 - 1] < x[i * 2]:
