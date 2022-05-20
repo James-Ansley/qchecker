@@ -3,3 +3,7 @@ pylint~=2.13.5
 flake8~=4.0.1
 flake8-json~=21.7.0
 libcst~=0.4.1
+qchecker~=0.0.0a4
+Deprecated~=1.2.13
+pytest~=7.1.1
+setuptools~=62.1.0

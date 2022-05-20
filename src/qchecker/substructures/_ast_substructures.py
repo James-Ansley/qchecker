@@ -4,6 +4,8 @@ from ast import *
 from collections.abc import Iterator, Iterable
 from itertools import chain, combinations
 
+from deprecated import deprecated
+
 from qchecker.match import Match, TextRange
 from qchecker.substructures._base import Substructure
 
@@ -330,6 +332,13 @@ class DuplicateExpression(ASTSubstructure):
     )
 
     @classmethod
+    @deprecated(
+        "DuplicateExpression is deprecated because this has such a low "
+        "threshold to be annoying and unhelpful for anything larger than "
+        "a simple function. Will be removed in future versions.",
+        version="0.0.0a4",
+        action="once",
+    )
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         # ToDo - Probably better if this just checks for a match in
         #  function definitions or is otherwise limited to local scopes
@@ -506,8 +515,6 @@ class RedundantFor(ASTSubstructure):
 #                 ):
 #                     names = nodes_of_class(cmp, Name, excluding=Call)
 #                     ids = {name.id for name in names}
-
-
 
 
 def nodes_of_class(
