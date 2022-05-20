@@ -9,8 +9,6 @@ A simple library for finding statement-level substructures
 
 ## Usage
 
-> qChecker is still in alpha and significant API changes are likely
-
 Currently, concrete subclasses of `qchecker.Substructure` define
 an `iter_matches` class method which iterates over `qchecker.match.Match`
 objects identifying where in the code those particular substructures occur.
