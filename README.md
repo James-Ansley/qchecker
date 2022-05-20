@@ -121,7 +121,7 @@ If you use this software, please cite it as below:
     month = {5},
     title = {{qChecker}},
     url = {https://github.com/James-Ansley/qchecker},
-    version = {0.0.0a4},
+    version = {1.0.0},
     year = {2022}
 }
 ```
