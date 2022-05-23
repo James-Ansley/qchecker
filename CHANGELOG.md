@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.1]
 
 ### Bugfixes
 
@@ -26,4 +26,4 @@ All notable changes to this project will be documented in this file.
   too.
 - Deprecation warnings have been removed
 
-[unreleased]: https://github.com/James-Ansley/qchecker/compare/main...dev-1.0.1
+[unreleased]: https://github.com/James-Ansley/qchecker/compare/v1.0.0...v1.0.1
