@@ -670,12 +670,12 @@ y = x ** 3
 
 Or, instead of:
 ```python
-y = x * x
+y = x * x * x * x
 ```
 
 Consider doing:
 ```python
-y = x ** 2
+y = x ** 4
 ```
 '''
 
@@ -842,7 +842,7 @@ if char in ("w", "a", "s", "d"):
 
 **Note:** This is not the same as writing `if char in "wasd": ...`.
 The `in` operator works slightly differently on strings than on tuples.
-In that case, char couuld be equal to "wa", or "asd" etc and still match because
+In that case, char could be equal to "wa", or "asd" etc and still match because
 the string `in` operator matches substrings.
 '''
 

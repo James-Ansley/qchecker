@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[BUG]"
+title: ""
 labels: ''
 assignees: ''
 
@@ -21,7 +21,7 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**OS (please complete the following information):**
+**OS (please complete the following information if this seems like an OS specific bug):**
  - OS: [e.g. Win 11 / Mac-BigSur / Ubuntu 22.04 / etc.]
 
 **Additional context**

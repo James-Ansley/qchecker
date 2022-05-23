@@ -453,6 +453,15 @@ def test_duplicate_if_else_statement():
             result = 'small'
             print('Do something')
             return result
+            
+    if x == 1:
+        and_now_for_something_completely_different(x)
+    elif x == 2:
+        do_something(x)
+        print("A side-effect")
+    else:
+        do_something_else(x)
+        print("A side-effect")
     ''')
     match, = DuplicateIfElseStatement.iter_matches(code)
     assert match.text_range == TextRange(3, 4, 9, 21)
@@ -495,6 +504,17 @@ def test_several_duplicate_if_else_statements():
             result = 'large'
         else:
             result = 'small'
+            
+    if x == 1:
+        and_now_for_something_completely_different(x)
+    elif x == 2:
+        do_something(x)
+        do_something_different(x)
+        print("A side-effect")
+    else:
+        do_something_else(x)
+        do_something_different(x)
+        print("A side-effect")
     ''')
     match, = SeveralDuplicateIfElseStatements.iter_matches(code)
     assert match.text_range == TextRange(3, 4, 11, 21)
@@ -601,6 +621,10 @@ def test_repeated_addition():
     y = x + x
     y = x + x + x
     y = y + x + x + x
+    
+    y = x + x_1
+    y = abc + abcd
+    y = xy + y
     ''')
     match1, match2, match3 = RepeatedAddition.iter_matches(code)
     assert match1.text_range == TextRange(2, 4, 2, 9)
@@ -615,6 +639,9 @@ def test_repeated_multiplication():
     y = y * x * x * x
 
     y = x * x
+    y = x * x * x_1
+    y = abc * abc * abcd
+    y = abcd * bcd * bcd
     ''')
     match1, match2, match3 = RepeatedMultiplication.iter_matches(code)
     assert match1.text_range == TextRange(2, 4, 2, 13)

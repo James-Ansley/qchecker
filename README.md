@@ -1,7 +1,7 @@
 # qChecker
 
 A simple library for finding statement-level substructures
-(e.g. micro-anti-patterns/smells) in Abstract Syntax Trees
+(e.g. micro-antipatterns) in Abstract and Concrete Syntax Trees
 
 ## Install
 
@@ -80,15 +80,7 @@ Match("If/Else Return Bool", "Looks like you are returning two [...]", TextRange
 The `DuplicateExpression` substructure is now deprecated and will be removed or
 moved in future versions. This substructure is also not in the `SUBSTRUCTURES`
 constant. A temporary `ALL_SUBSTRUCTURES` constant has been added that includes
-it along with all other substructures. A warning will show when trying to
-match `DuplicateExpression` substructures. To disable this, filter
-the `DeprecationWarning` warning type:
-
-```python
-import warnings
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-```
+it along with all other substructures.
 
 # Extras - Programmatic Flake8 and Pylint
 
@@ -119,7 +111,7 @@ If you use this software, please cite it as below:
     month = {5},
     title = {{qChecker}},
     url = {https://github.com/James-Ansley/qchecker},
-    version = {1.0.0},
+    version = {1.0.1},
     year = {2022}
 }
 ```

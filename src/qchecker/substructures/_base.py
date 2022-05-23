@@ -32,7 +32,8 @@ class Substructure(abc.ABC):
     @abc.abstractmethod
     def iter_matches(cls, code: str) -> Iterator[Match]:
         """
-        Iterates over all matching substructures in the given module
+        Iterates over all matching substructures in the given module.
+        Is not guaranteed to lazily search for matches but often will.
 
         :raises SyntaxError: If the given code cannot be parsed.
         """

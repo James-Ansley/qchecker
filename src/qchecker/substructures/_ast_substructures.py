@@ -20,8 +20,6 @@ __all__ = [
     'EmptyElseBody',
     'NestedIf',
     'UnnecessaryElse',
-    'DuplicateIfElseStatement',
-    'SeveralDuplicateIfElseStatements',
     'DuplicateIfElseBody',
     'AugmentableAssignment',
     'DuplicateExpression',  # Deprecated
@@ -247,38 +245,6 @@ class UnnecessaryElse(ASTSubstructure):
                 case If(body=b1, orelse=b2) if (
                         match_ends(b1, b2) == len(b2)
                         and len(b2) >= 1
-                        and not equals(b1, b2)
-                ):
-                    yield cls._make_match(node)
-
-
-class DuplicateIfElseStatement(ASTSubstructure):
-    name = "Duplicate If/Else Statement"
-    technical_description = "If(..)[.., stmt] Else[.., stmt]"
-
-    @classmethod
-    def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        for node in nodes_of_class(module, If):
-            match node:
-                case If(body=b1, orelse=b2) if (
-                        len(b2) > 1 and len(b1) > 1
-                        and match_ends(b1, b2) == 1
-                        and not equals(b1, b2)
-                ):
-                    yield cls._make_match(node)
-
-
-class SeveralDuplicateIfElseStatements(ASTSubstructure):
-    name = "Several Duplicate If/Else Statements"
-    technical_description = "If(..)[.., *stmts] Else[.., *stmts]"
-
-    @classmethod
-    def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        for node in nodes_of_class(module, If):
-            match node:
-                case If(body=b1, orelse=b2) if (
-                        len(b2) > 1 and len(b1) > 1
-                        and match_ends(b1, b2) > 1
                         and not equals(b1, b2)
                 ):
                     yield cls._make_match(node)
@@ -633,14 +599,20 @@ def weight(node):
 def is_repeated_add(node: BinOp):
     # ToDo – Do this in a better way
     code = unparse(node)
-    regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \+ \1)+'
+    regex = r'(?<![a-zA-Z0-9_])' \
+            r'([a-zA-Z_][a-zA-Z0-9_]*)' \
+            r'(?: \+ \1)+' \
+            r'(?![a-zA-Z0-9_])'
     return re.search(regex, code) is not None
 
 
 def is_repeated_multiplication(node: BinOp):
     # ToDo – Do this in a better way
     code = unparse(node)
-    regex = r'([a-zA-Z_][a-zA-Z0-9_]*)(?: \* \1){2,}'
+    regex = r'(?<![a-zA-Z0-9_])' \
+            r'([a-zA-Z_][a-zA-Z0-9_]*)' \
+            r'(?: \* \1){2,}' \
+            r'(?![a-zA-Z0-9_])'
     return re.search(regex, code) is not None
 
 
