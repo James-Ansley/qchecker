@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../../src'))
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -39,6 +39,7 @@ extensions = [
     'sphinx_rtd_theme',
 ]
 autosummary_generate = True
+autodoc_mock_imports = ["pylint"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
