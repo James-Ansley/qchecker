@@ -1,7 +1,6 @@
 from textwrap import dedent
 
 import pytest
-
 from qchecker.match import TextRange
 from qchecker.substructures import *
 
@@ -616,37 +615,43 @@ def test_missed_absolute_value():
         assert match.text_range == TextRange(i, 3, i, len(lines[i - 1]) - 5)
 
 
-def test_repeated_addition():
-    code = dedent('''
-    y = x + x
-    y = x + x + x
-    y = y + x + x + x
-    
-    y = x + x_1
-    y = abc + abcd
-    y = xy + y
-    ''')
-    match1, match2, match3 = RepeatedAddition.iter_matches(code)
-    assert match1.text_range == TextRange(2, 4, 2, 9)
-    assert match2.text_range == TextRange(3, 4, 3, 13)
-    assert match3.text_range == TextRange(4, 4, 4, 17)
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('x + x', True),
+     ('x + x + x', True),
+     ('y + x + x + x', True),
+     ('(y * x) + (y * x)', True),
+     ('y + x + x * x', False),
+     ('y * x + x', False),
+     ('x + x_1', False),
+     ('abc + abcd', False),
+     ('xy + y', False))
+)
+def test_repeated_addition(line, should_match):
+    match = next(RepeatedAddition.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line))
 
 
-def test_repeated_multiplication():
-    code = dedent('''
-    y = x * x * x
-    y = x * x * x * x
-    y = y * x * x * x
-
-    y = x * x
-    y = x * x * x_1
-    y = abc * abc * abcd
-    y = abcd * bcd * bcd
-    ''')
-    match1, match2, match3 = RepeatedMultiplication.iter_matches(code)
-    assert match1.text_range == TextRange(2, 4, 2, 13)
-    assert match2.text_range == TextRange(3, 4, 3, 17)
-    assert match3.text_range == TextRange(4, 4, 4, 17)
+@pytest.mark.parametrize(
+    'line,should_match',
+    (('x * x * x', True),
+     ('x * x * x * x', True),
+     ('y * x * x * x', True),
+     ('(y + x) * (y + x) * (y + x)', True),
+     ('x * x', False),
+     ('x * x * x_1', False),
+     ('x * x + x', False),
+     ('x * x * x ** 0.5', False),  # ToDo – Check this in the future
+     ('abc * abc * abcd', False),
+     ('abcd * bcd * bcd', False))
+)
+def test_repeated_multiplication(line, should_match):
+    match = next(RepeatedMultiplication.iter_matches(line), None)
+    assert (match is not None) == should_match
+    if should_match:
+        assert match.text_range == TextRange(1, 0, 1, len(line))
 
 
 @pytest.mark.parametrize(
@@ -811,7 +816,6 @@ def test_redundant_for(line, should_match):
     assert (match is not None) == should_match
     if should_match:
         assert match.text_range == TextRange(1, 0, 1, len(line) - 4)
-
 
 # def test_while_as_for():
 #     code = dedent('''

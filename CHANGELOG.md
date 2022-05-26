@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2]
+
+### Bugfixes
+
+- Fixed expression tree parsing so `RepeatedAddition` and
+  `RepeatedMultiplication` patterns consider order of operations.
+  [#5](https://github.com/James-Ansley/qchecker/issues/5)
+
+### Changes
+
+- `RepeatedAddition` and `RepeatedMultiplication` patterns now consider
+  non-adjacent repeats. For example, `x + y + x` is now considered a repeated
+  addition.
+
 ## [1.0.1]
 
 ### Bugfixes
@@ -26,4 +40,6 @@ All notable changes to this project will be documented in this file.
   too.
 - Deprecation warnings have been removed
 
-[unreleased]: https://github.com/James-Ansley/qchecker/compare/v1.0.0...v1.0.1
+[1.0.2]: https://github.com/James-Ansley/qchecker/compare/v1.0.1...v1.0.2
+
+[1.0.1]: https://github.com/James-Ansley/qchecker/compare/v1.0.0...v1.0.1

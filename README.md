@@ -75,13 +75,6 @@ Match("Augmentable Assignment", "It looks like you are writting an [...]", TextR
 Match("If/Else Return Bool", "Looks like you are returning two [...]", TextRange(3,4->6,20))
 ```
 
-### Note:
-
-The `DuplicateExpression` substructure is now deprecated and will be removed or
-moved in future versions. This substructure is also not in the `SUBSTRUCTURES`
-constant. A temporary `ALL_SUBSTRUCTURES` constant has been added that includes
-it along with all other substructures.
-
 # Extras - Programmatic Flake8 and Pylint
 
 qchecker can be installed with support for programmatically running flake8 and
@@ -111,7 +104,7 @@ If you use this software, please cite it as below:
     month = {5},
     title = {{qChecker}},
     url = {https://github.com/James-Ansley/qchecker},
-    version = {1.0.1},
+    version = {1.0.2},
     year = {2022}
 }
 ```

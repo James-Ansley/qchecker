@@ -1,11 +1,11 @@
 import abc
-import re
 from ast import *
 from collections.abc import Iterator, Iterable
+from dataclasses import dataclass
 from itertools import chain, combinations
+from typing import Any
 
 from deprecated import deprecated
-
 from qchecker.match import Match, TextRange
 from qchecker.substructures._base import Substructure
 
@@ -351,11 +351,9 @@ class RepeatedAddition(ASTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        # ToDo – Make this better
-        visited = set()
-        for node in nodes_of_class(module, BinOp):
-            if node not in visited and is_repeated_add(node):
-                visited.update(nodes_of_class(node, BinOp))
+        for node in nodes_of_class(module, BinOp, excluding=BinOp):
+            expression = simplify_expression(node)
+            if contains_duplicate_add(expression):
                 yield cls._make_match(node)
 
 
@@ -365,11 +363,9 @@ class RepeatedMultiplication(ASTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        # ToDo – Make this better
-        visited = set()
-        for node in nodes_of_class(module, BinOp):
-            if node not in visited and is_repeated_multiplication(node):
-                visited.update(nodes_of_class(node, BinOp))
+        for node in nodes_of_class(module, BinOp, excluding=BinOp):
+            expression = simplify_expression(node)
+            if contains_duplicate_mult(expression):
                 yield cls._make_match(node)
 
 
@@ -494,8 +490,8 @@ def nodes_of_class(
     """
     if isinstance(node, cls):
         yield node
-    for child in iter_child_nodes(node):
-        if not isinstance(child, excluding):
+    if not isinstance(node, excluding):
+        for child in iter_child_nodes(node):
             yield from nodes_of_class(child, cls, excluding=excluding)
 
 
@@ -596,26 +592,6 @@ def weight(node):
     return weight
 
 
-def is_repeated_add(node: BinOp):
-    # ToDo – Do this in a better way
-    code = unparse(node)
-    regex = r'(?<![a-zA-Z0-9_])' \
-            r'([a-zA-Z_][a-zA-Z0-9_]*)' \
-            r'(?: \+ \1)+' \
-            r'(?![a-zA-Z0-9_])'
-    return re.search(regex, code) is not None
-
-
-def is_repeated_multiplication(node: BinOp):
-    # ToDo – Do this in a better way
-    code = unparse(node)
-    regex = r'(?<![a-zA-Z0-9_])' \
-            r'([a-zA-Z_][a-zA-Z0-9_]*)' \
-            r'(?: \* \1){2,}' \
-            r'(?![a-zA-Z0-9_])'
-    return re.search(regex, code) is not None
-
-
 def is_updated(name_id: str, block: list[AST]):
     updated_names = (
         updated_name
@@ -624,3 +600,53 @@ def is_updated(name_id: str, block: list[AST]):
         if name_id == updated_name.id and isinstance(updated_name.ctx, Store)
     )
     return next(updated_names, None) is not None
+
+
+@dataclass(frozen=True)
+class FlatOp:
+    op: Any
+    values: tuple
+
+    def __str__(self):
+        return f"{self.op.__name__}({', '.join(map(str, self.values))})"
+
+
+def simplify_expression(root: BinOp | expr):
+    if isinstance(root, Name):
+        return root.id
+    if not isinstance(root, BinOp):
+        return root
+    left = simplify_expression(root.left)
+    right = simplify_expression(root.right)
+    match root.op:
+        case Add():
+            values = hoist(Add, left) + hoist(Add, right)
+            return FlatOp(Add, values)
+        case Mult():
+            values = hoist(Mult, left) + hoist(Mult, right)
+            return FlatOp(Mult, values)
+        case _:
+            return FlatOp(type(root.op), (left, right))
+
+
+def hoist(op, operands):
+    if isinstance(operands, FlatOp) and operands.op is op:
+        return operands.values
+    else:
+        return operands,
+
+
+def contains_duplicate_add(root):
+    if not isinstance(root, FlatOp):
+        return False
+    if root.op is Add and len(root.values) != len(set(root.values)):
+        return True
+    return any(contains_duplicate_add(n) for n in root.values)
+
+
+def contains_duplicate_mult(root):
+    if not isinstance(root, FlatOp):
+        return False
+    if root.op is Mult and len(root.values) - 1 > len(set(root.values)):
+        return True
+    return any(contains_duplicate_mult(n) for n in root.values)
