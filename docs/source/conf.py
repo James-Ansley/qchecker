@@ -1,6 +1,9 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../src'))
+# Girl, I'm fighting for my life here
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 # Configuration file for the Sphinx documentation builder.
 #
