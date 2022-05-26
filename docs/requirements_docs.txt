@@ -1,0 +1,6 @@
+sphinx~=4.5.0
+sphinx-rtd-theme~=1.0.0
+Deprecated~=1.2.13
+pylint~=2.13.5
+flake8~=4.0.1
+flake8-json~=21.7.0
