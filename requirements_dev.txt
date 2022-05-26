@@ -1,10 +1,2 @@
-tomli~=2.0.1
-libcst~=0.4.1
-Deprecated~=1.2.13
 pytest==7.1.1
 pytest-cov==3.0.0
-sphinx~=4.5.0
-sphinx-rtd-theme~=1.0.0
-pylint~=2.13.5
-flake8~=4.0.1
-flake8-json~=21.7.0
