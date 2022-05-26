@@ -2,7 +2,7 @@ API
 ===
 
 .. autosummary::
-   :toctree: autosummary
+   :toctree: _autosummary
    :recursive:
 
    qchecker.substructures
