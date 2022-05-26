@@ -1,7 +1,19 @@
+"""
+Defines several `Substructure` classes that each detect a
+micro-antipattern.
+
+This module also includes two constants:
+    - :code:`SUBSTRUCTURES` which is a tuple of all concrete
+      :class:`Substructure` classes
+
+    - :code:`ALL_SUBSTRUCTURES` which also includes deprecated
+      :class:`Substructure` classes
+"""
+
 from inspect import isabstract as _isabstract
 
-from ._ast_substructures import *
 from ._base import Substructure
+from ._ast_substructures import *
 from ._cst_substructures import *
 
 # Experience shows these substructures are 'annoying' and should not be
@@ -23,7 +35,7 @@ def _get_concrete_substructures():
         q.extend(current.__subclasses__())
 
 
-ALL_SUBSTRUCTURES = [*_get_concrete_substructures()]
+ALL_SUBSTRUCTURES = tuple(_get_concrete_substructures())
 
-SUBSTRUCTURES = [s for s in ALL_SUBSTRUCTURES
-                 if s not in _unnecessary_substructures]
+SUBSTRUCTURES = tuple(s for s in ALL_SUBSTRUCTURES
+                      if s not in _unnecessary_substructures)

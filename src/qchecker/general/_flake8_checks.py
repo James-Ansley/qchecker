@@ -5,6 +5,7 @@ from qchecker.match import Match, TextRange
 
 from ._process import _run_subprocess
 
+__all__ = ['get_flake8_matches']
 
 def _run_flake8(code: str) -> list[dict]:
     """
@@ -24,7 +25,11 @@ def _run_flake8(code: str) -> list[dict]:
 
 
 def get_flake8_matches(code: str) -> list[Match]:
-    """Returns a list of matches detected by flake8"""
+    """
+    Returns a list of matches detected by flake8
+
+    :param code: The code to check
+    """
     return [
         Match(
             f"flake8-{f8_match['code']}",

@@ -9,6 +9,13 @@ from qchecker.match import Match
 
 
 class Substructure(abc.ABC):
+    """
+    Generic Substructure base class.
+
+    Each substructure allows you to iterate, list, count, or check for the
+    existence of a particular micro-antipattern in a code string.
+    """
+
     subsets: list['Substructure'] = []
 
     @classmethod
@@ -26,6 +33,10 @@ class Substructure(abc.ABC):
     @classmethod
     @property
     def description(cls):
+        """
+        A student-readable description of the error as defined by the
+        descriptions module
+        """
         return get_description(cls.__name__)
 
     @classmethod

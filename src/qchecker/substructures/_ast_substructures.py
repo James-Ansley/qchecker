@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from itertools import chain, combinations
 from typing import Any
 
-from deprecated import deprecated
+from deprecated.sphinx import deprecated
 from qchecker.match import Match, TextRange
 from qchecker.substructures._base import Substructure
 
@@ -288,6 +288,12 @@ class AugmentableAssignment(ASTSubstructure):
                     yield cls._make_match(node)
 
 
+@deprecated(
+    "DuplicateExpression is deprecated because this has such a low "
+    "threshold to be annoying and unhelpful for anything larger than "
+    "a simple function. Will be removed in future versions.",
+    version="0.0.0a4",
+)
 class DuplicateExpression(ASTSubstructure):
     # ToDo - This is a smell not a pattern
     #  – should be removed for automated feedback

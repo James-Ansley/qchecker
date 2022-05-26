@@ -8,6 +8,9 @@ from qchecker.descriptions import Markup, Description
 from qchecker.match import Match, TextRange
 
 
+__all__ = ['get_pylint_matches']
+
+
 def _run_pylint(code: str, errors: list[str] | None) -> list[dict]:
     """
     Runs pylint on the given code and returns a list of dictionaries
@@ -35,7 +38,13 @@ def _run_pylint(code: str, errors: list[str] | None) -> list[dict]:
 
 
 def get_pylint_matches(code: str, errors: list[str] = None) -> list[Match]:
-    """Returns a list of matches detected by pylint"""
+    """
+    Returns a list of matches detected by pylint
+
+    :param code: The code to check
+    :param errors: A list of pylint errors to check. If not given, all
+        pylint errors will be detected
+    """
     return [
         Match(
             f"pylint-{pl_match['message-id']}",
