@@ -10,7 +10,12 @@ _DEFAULT_PATH = Path(__file__).parent.resolve() / 'descriptions.toml'
 _DESCRIPTIONS: list[dict[str, 'Description']] = []
 
 
-@dataclass
+class Markup(Enum):
+    markdown = 'markdown'
+    plaintext = 'plaintext'
+
+
+@dataclass(slots=True)
 class Description:
     """
     A description of a substructure that contains a markup and content.

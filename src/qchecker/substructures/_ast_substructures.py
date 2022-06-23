@@ -7,6 +7,7 @@ from typing import Any
 
 from deprecated.sphinx import deprecated
 from qchecker.match import Match, TextRange
+from qchecker.parser import CodeModule
 from qchecker.substructures._base import Substructure
 
 __all__ = [
@@ -31,7 +32,11 @@ __all__ = [
     'RedundantComparison',
     'MergeableEqual',
     'RedundantFor',
-    # 'WhileAsFor',
+    'NoOp',
+    'Tautology',
+    'Contradiction',
+    'WhileAsFor',
+    'ForWithRedundantIndexing',
 ]
 
 _DOUBLE_WEIGHTED_NODES = (
@@ -56,11 +61,13 @@ _COMPLIMENT_OPS |= {v: k for k, v in _COMPLIMENT_OPS.items()}
 
 
 class ASTSubstructure(Substructure, abc.ABC):
+    subsets: list['ASTSubstructure'] = []
+
     @classmethod
-    def iter_matches(cls, code: str) -> Iterator[Match]:
+    def iter_matches(cls, code: CodeModule | str) -> Iterator[Match]:
         # All problems in computer science
         # can be solved by another level of indirection.
-        module = parse(code)
+        module = code.ast if isinstance(code, CodeModule) else parse(code)
         yield from cls._iter_matches(module)
 
     @classmethod
@@ -70,7 +77,7 @@ class ASTSubstructure(Substructure, abc.ABC):
 
     @classmethod
     def _match_collides_with_subset(cls, module, match):
-        matches = chain(*(sub_struct.iter_matches(module)
+        matches = chain(*(sub_struct._iter_matches(module)
                           for sub_struct in cls.subsets))
         return any(submatch.text_range.contains(match.text_range)
                    for submatch in matches)
@@ -377,7 +384,7 @@ class RepeatedMultiplication(ASTSubstructure):
 
 class RedundantArithmetic(ASTSubstructure):
     name = 'Redundant Arithmetic'
-    technical_description = '1 * x | x + 0 | x / 1 | +x'
+    technical_description = '1 * x | x + 0 | x - 0 | x / 1 | +x'
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
@@ -385,8 +392,10 @@ class RedundantArithmetic(ASTSubstructure):
             match (node.left, node.op, node.right):
                 case ((Constant(0), Add(), _)
                       | (_, Add(), Constant(0))
+                      | (_, Sub(), Constant(0))
                       | (Constant(1), Mult(), _)
                       | (_, Mult(), Constant(1))
+                      | (_, Pow(), Constant(1))
                       | (_, Div(), Constant(1))):
                     yield cls._make_match(node)
                 case (Name(n1), Div(), Name(n2)) if n1 == n2:
@@ -459,33 +468,147 @@ class RedundantFor(ASTSubstructure):
             match node:
                 case For(
                     iter=Call(func=Name(id='range'), args=[Constant(v)]) as end
-                ) if v == 0 or v == 1:
+                ) if v in (0, 1):
                     yield cls._make_match(node, end)
 
 
-# class WhileAsFor(ASTSubstructure):
-#     # Notes: does not consider names within calls.
-#     # ToDo - Does not consider mutable types – might lead to weird behaviour
-#     name = 'While as For'
-#     technical_description = "while(compare(...)):... " \
-#                             "- where exactly one variable from the compare " \
-#                             "is updated in the body, and it is updated by " \
-#                             "a constant amount"
-#
-#     @classmethod
-#     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-#         for node in nodes_of_class(module, While):
-#             match node:
-#                 case While(
-#                     test=Compare() as cmp,
-#                     body=body,
-#                 ):
-#                     names = nodes_of_class(cmp, Name, excluding=Call)
-#                     ids = {name.id for name in names}
+class NoOp(ASTSubstructure):
+    name = 'No Op'
+    technical_description = 'name = name | name (+|-)= 0 | name (*|/|**)= 1'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, (Assign, AnnAssign)):
+            if is_nop(node):
+                yield cls._make_match(node, node)
+        for node in nodes_of_class(module, AugAssign):
+            match (node.op, node.value):
+                case ((Add(), Constant(0))
+                      | (Sub(), Constant(0))
+                      | (Mult(), Constant(1))
+                      | (Div(), Constant(1))
+                      | (Pow(), Constant(1))):
+                    yield cls._make_match(node, node)
+
+
+class Tautology(ASTSubstructure):
+    name = 'Tautology'
+    technical_description = 'A statement that is always True ' \
+                            '(excluding the True constant)'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, (BoolOp, Compare)):
+            match node:
+                case BoolOp(
+                    op=Or(), values=[left, right]
+                ) if compliments(left, right):
+                    yield cls._make_match(node, node)
+                case BoolOp(
+                    op=Or(), values=values
+                ) if any(
+                    isinstance(v, Constant) and v.value is True for v in values
+                ):
+                    yield cls._make_match(node, node)
+                case Compare(
+                    left=Name(id=n1) | Constant(value=n1),
+                    ops=[Eq()] | [Is()],
+                    comparators=[Name(id=n2) | Constant(value=n2)],
+                ) if n1 == n2:
+                    yield cls._make_match(node, node)
+
+
+class Contradiction(ASTSubstructure):
+    name = 'Contradiction'
+    technical_description = 'A statement that is always False ' \
+                            '(excluding the False constant)'
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, (BoolOp, Compare)):
+            match node:
+                case BoolOp(
+                    op=And(), values=[left, right]
+                ) if compliments(left, right):
+                    yield cls._make_match(node, node)
+                case BoolOp(
+                    op=And(), values=values
+                ) if any(
+                    isinstance(v, Constant) and v.value is False for v in values
+                ):
+                    yield cls._make_match(node, node)
+                case Compare(
+                    left=Name(id=n1) | Constant(value=n1),
+                    ops=[NotEq()] | [IsNot()],
+                    comparators=[Name(id=n2) | Constant(value=n2)],
+                ) if n1 == n2:
+                    yield cls._make_match(node, node)
+
+
+class WhileAsFor(ASTSubstructure):
+    # Notes: does not consider names within calls.
+    # ToDo - Does not consider mutable types – might lead to weird behaviour
+    name = 'While as For'
+    technical_description = "while(compare(...)):... " \
+                            "- where exactly one variable from the compare " \
+                            "is updated in the body, and it is updated by " \
+                            "a constant amount"
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, While):
+            match node:
+                case While(
+                    test=Compare() as cmp,
+                    body=body,
+                ):
+                    test_name_ids = {
+                        n.id for n in nodes_of_class(cmp, Name, excluding=Call)
+                    }
+                    ctx_store = {
+                        n.id for n in nodes_of_class(body, Name)
+                        if isinstance(n.ctx, Store)
+                    }
+                    updated_by_constant = set(names_updated_by_constant(body))
+                    if (
+                            len(test_name_ids & ctx_store) == 1
+                            and len(test_name_ids & updated_by_constant) == 1
+                            and len(ctx_store & updated_by_constant) == 1
+                    ):
+                        yield cls._make_match(node)
+
+
+class ForWithRedundantIndexing(ASTSubstructure):
+    # assumes range and len are not bound to other values during runtime
+    name = 'For With Redundant Indexing'
+    technical_description = "for target in range(len(seq)): WHERE " \
+                            "the only occurrences of target are: " \
+                            "seq[target] AND seq, target, and seq[target] " \
+                            "are not updated in the loop body"
+
+    @classmethod
+    def _iter_matches(cls, module: Module) -> Iterator[Match]:
+        for node in nodes_of_class(module, For):
+            match node:
+                case For(
+                    target=Name(id=target),
+                    iter=Call(
+                        func=Name(id='range'),
+                        args=[Call(func=Name(id='len'), args=[Name(id=seq)])]
+                    ),
+                    body=body,
+                ) if all_ctx_are_load(all_names_of(body, seq, target)):
+                    subscripts = [*subscripts_of(body, seq, target)]
+                    targets = [*all_names_of(body, target)]
+
+                    all_subs_load = all_ctx_are_load(subscripts)
+                    target_only_in_subs = len(subscripts) == len(targets)
+                    if all_subs_load and target_only_in_subs:
+                        yield cls._make_match(node)
 
 
 def nodes_of_class(
-        node: AST,
+        node: AST | Iterable[AST],
         cls: type | tuple[type, ...],
         *,
         excluding: type | tuple[type, ...] = tuple(),
@@ -494,6 +617,11 @@ def nodes_of_class(
     Yields nodes in the AST walk of the given cls type. Order is not guaranteed.
     Does not include nodes that are the children of nodes of type excluding.
     """
+    if isinstance(node, Iterable):
+        yield from chain.from_iterable(
+            nodes_of_class(n, cls, excluding=excluding) for n in node
+        )
+        return
     if isinstance(node, cls):
         yield node
     if not isinstance(node, excluding):
@@ -582,6 +710,8 @@ def is_nop(node):
         # pylint x = x covered by self-assigning-variable (W0127)
         case Assign([Name(n1)], Name(n2)) if n1 == n2:
             return True
+        case AnnAssign(target=Name(id=n1), value=Name(id=n2)) if n1 == n2:
+            return True
     return False
 
 
@@ -598,14 +728,32 @@ def weight(node):
     return weight
 
 
-def is_updated(name_id: str, block: list[AST]):
-    updated_names = (
-        updated_name
-        for stmt in block
-        for updated_name in nodes_of_class(stmt, Name, excluding=Call)
-        if name_id == updated_name.id and isinstance(updated_name.ctx, Store)
-    )
-    return next(updated_names, None) is not None
+def names_updated_by_constant(body):
+    # ToDo - check for cases where the right side of the assign contains
+    #  names that don't change in the loop body.
+    assigns = [n for line in body
+               for n in nodes_of_class(line, (Assign, AugAssign))]
+    for assign in assigns:
+        match assign:
+            case Assign(
+                targets=targets,
+                value=val
+            ):
+                match val:
+                    case BinOp(
+                        left=Name(id=n), op=Add() | Sub(), right=Constant()
+                    ) if n == targets[0].id:
+                        yield n
+                    case BinOp(
+                        left=Constant(), op=Add() | Sub(), right=Name(id=n)
+                    ) if n == targets[0].id:
+                        yield n
+            case AugAssign(
+                target=Name(id=n),
+                op=Add() | Sub(),
+                value=Constant(),
+            ):
+                yield n
 
 
 @dataclass(frozen=True)
@@ -656,3 +804,21 @@ def contains_duplicate_mult(root):
     if root.op is Mult and len(root.values) - 1 > len(set(root.values)):
         return True
     return any(contains_duplicate_mult(n) for n in root.values)
+
+
+def subscripts_of(body, value_id, slice_id):
+    for node in nodes_of_class(body, Subscript):
+        match node:
+            case Subscript(
+                value=Name(id=v),
+                slice=Name(id=s),
+            ) if v == value_id and s == slice_id:
+                yield node
+
+
+def all_ctx_are_load(nodes: Iterable[Name | Subscript]):
+    return all(isinstance(n.ctx, Load) for n in nodes)
+
+
+def all_names_of(node: AST | Iterable[AST], *name_ids: str):
+    yield from (n for n in nodes_of_class(node, Name) if n.id in name_ids)

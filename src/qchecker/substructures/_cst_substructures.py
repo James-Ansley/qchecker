@@ -2,10 +2,12 @@ import abc
 import ast
 from collections.abc import Iterable, Iterator
 
-import qchecker.match
 from libcst import *
 from libcst.metadata import PositionProvider
+
+import qchecker.match
 from qchecker.match import TextRange
+from qchecker.parser import CodeModule
 from qchecker.substructures._base import Substructure
 
 __all__ = [
@@ -18,14 +20,14 @@ __all__ = [
 
 class CSTSubstructure(Substructure, abc.ABC):
     @classmethod
-    def iter_matches(cls, code: str) -> Iterable[Match]:
+    def iter_matches(cls, code: CodeModule | str) -> Iterable[Match]:
         # All problems in computer science
         # can be solved by another level of indirection.
-        try:
-            module = MetadataWrapper(parse_module(code))
-            yield from cls._iter_matches(module)
-        except ParserSyntaxError as e:
-            raise SyntaxError from e
+        if isinstance(code, CodeModule):
+            module = code.cst
+        else:
+            module = parse_module(code)
+        yield from cls._iter_matches(module)
 
     @classmethod
     @abc.abstractmethod
@@ -50,7 +52,7 @@ class ConfusingElse(CSTSubstructure):
     name = "Confusing Else"
     technical_description = "If(..)[..] Else[If(..)[..] Else[..]]"
 
-    class Visitor(CSTVisitor):
+    class _Visitor(CSTVisitor):
         METADATA_DEPENDENCIES = (PositionProvider,)
 
         def __init__(self):
@@ -72,7 +74,7 @@ class ConfusingElse(CSTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterable[Match]:
-        v = cls.Visitor()
+        v = cls._Visitor()
         module.visit(v)
         yield from (cls._make_match(from_pos, to_pos)
                     for from_pos, to_pos in v.match_positions)
@@ -82,7 +84,7 @@ class ElseIf(CSTSubstructure):
     name = 'Else If'
     technical_description = 'IF(..)[] Else[If()]'
 
-    class Visitor(CSTVisitor):
+    class _Visitor(CSTVisitor):
         METADATA_DEPENDENCIES = (PositionProvider,)
 
         def __init__(self):
@@ -106,7 +108,7 @@ class ElseIf(CSTSubstructure):
     @classmethod
     def _iter_matches(cls, module: MetadataWrapper) -> Iterable[Match]:
         # ToDo - Adjust end lineno and col offset
-        v = cls.Visitor()
+        v = cls._Visitor()
         module.visit(v)
         yield from (cls._make_match(from_pos, to_pos)
                     for from_pos, to_pos in v.match_positions)
@@ -116,7 +118,7 @@ class DuplicateIfElseStatement(CSTSubstructure):
     name = "Duplicate If/Else Statement"
     technical_description = "If(..)[.., stmt] Else[.., stmt]"
 
-    class Visitor(CSTVisitor):
+    class _Visitor(CSTVisitor):
         METADATA_DEPENDENCIES = (PositionProvider,)
 
         def __init__(self):
@@ -146,7 +148,7 @@ class DuplicateIfElseStatement(CSTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: MetadataWrapper) -> Iterator[Match]:
-        v = cls.Visitor()
+        v = cls._Visitor()
         module.visit(v)
         yield from (cls._make_match(from_pos, to_pos)
                     for from_pos, to_pos in v.match_positions)
@@ -156,7 +158,7 @@ class SeveralDuplicateIfElseStatements(CSTSubstructure):
     name = "Several Duplicate If/Else Statements"
     technical_description = "If(..)[.., *stmts] Else[.., *stmts]"
 
-    class Visitor(CSTVisitor):
+    class _Visitor(CSTVisitor):
         METADATA_DEPENDENCIES = (PositionProvider,)
 
         def __init__(self):
@@ -186,7 +188,7 @@ class SeveralDuplicateIfElseStatements(CSTSubstructure):
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
-        v = cls.Visitor()
+        v = cls._Visitor()
         module.visit(v)
         yield from (
             cls._make_match(from_pos, to_pos)

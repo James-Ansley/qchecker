@@ -8,6 +8,9 @@ This module also includes two constants:
 
     - :code:`ALL_SUBSTRUCTURES` which also includes deprecated
       :class:`Substructure` classes
+
+These tuples cannot be guaranteed to be stable between versions and should not
+be relied on.
 """
 
 from inspect import isabstract as _isabstract

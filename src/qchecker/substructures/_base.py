@@ -6,6 +6,7 @@ from qchecker.descriptions import get_description
 __all__ = ['Substructure']
 
 from qchecker.match import Match
+from qchecker.parser import CodeModule
 
 
 class Substructure(abc.ABC):
@@ -15,8 +16,6 @@ class Substructure(abc.ABC):
     Each substructure allows you to iterate, list, count, or check for the
     existence of a particular micro-antipattern in a code string.
     """
-
-    subsets: list['Substructure'] = []
 
     @classmethod
     @property
@@ -41,38 +40,66 @@ class Substructure(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def iter_matches(cls, code: str) -> Iterator[Match]:
+    def iter_matches(cls, code: CodeModule | str) -> Iterator[Match]:
         """
         Iterates over all matching substructures in the given module.
         Is not guaranteed to lazily search for matches but often will.
+
+        :param code:
+            The code to be parsed.
+
+            .. deprecated:: 1.1.0
+                String parameters will not be supported in future versions.
+                Wrap the code into a CodeModule instead.
 
         :raises SyntaxError: If the given code cannot be parsed.
         """
 
     @classmethod
-    def count_matches(cls, code: str) -> int:
+    def count_matches(cls, code: CodeModule | str) -> int:
         """
         Returns the number of matching substructures in the given module
+
+        :param code:
+            The code to be parsed.
+
+            .. deprecated:: 1.1.0
+                String parameters will not be supported in future versions.
+                Wrap the code into a CodeModule instead.
 
         :raises SyntaxError: If the given code cannot be parsed.
         """
         return len(list(cls.iter_matches(code)))
 
     @classmethod
-    def list_matches(cls, code: str) -> list[Match]:
+    def list_matches(cls, code: CodeModule | str) -> list[Match]:
         """
         Returns a list of all matching substructures in the given module
+
+        :param code:
+            The code to be parsed.
+
+            .. deprecated:: 1.1.0
+                String parameters will not be supported in future versions.
+                Wrap the code into a CodeModule instead.
 
         :raises SyntaxError: If the given code cannot be parsed.
         """
         return list(cls.iter_matches(code))
 
     @classmethod
-    def is_present(cls, code: str) -> bool:
+    def is_present(cls, code: CodeModule | str) -> bool:
         """
         Convenience method to check if a particular substructure is present in
         the given code. This will often be more efficient than checking if
         the count_matches function is greater than 0.
+
+        :param code:
+            The code to be parsed.
+
+            .. deprecated:: 1.1.0
+                String parameters will not be supported in future versions.
+                Wrap the code into a CodeModule instead.
 
         :raises SyntaxError: If the given code cannot be parsed.
         """

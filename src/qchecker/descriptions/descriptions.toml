@@ -747,12 +747,12 @@ if x >= 5:
 
 Or, instead of:
 ```python
-if not (x == 5):
+if not x in values:
     ...
 ```
-Consider doing:
+Consider using the `not in` operator:
 ```python
-if x != 5:
+if x not in values:
     ...
 ```
 '''
@@ -862,5 +862,134 @@ for i in range(1):
 Consider doing:
 ```python
 do_something(1)
+```
+'''
+
+[NoOp]
+markup = 'markdown'
+content = '''
+It looks like this expression isn't doing anything!
+Consider removing it.
+
+---
+
+Statements like `x = x` or `x += 0` don't actually update the value of `x` in
+any meaningful way. These expressions can instead be removed.
+'''
+
+[Tautology]
+markup = 'markdown'
+content = '''
+It looks like this expression always evaluates to True.
+Consider replacing it with the `True` constant.
+
+---
+
+For example, instead of:
+```python
+while x % 2 == 0 or x % 2 == 1:
+    ...
+```
+Consider doing:
+```python
+while True:
+    ...
+```
+
+---
+
+Or, Instead of:
+```python
+if n == 0 or n != 0:
+    do_something(n)
+```
+
+Consider doing:
+```python
+do_something(n)
+```
+'''
+
+[Contradiction]
+markup = 'markdown'
+content = '''
+It looks like this expression always evaluates to False.
+Consider replacing it with the `False` constant or, if you're using this
+expression as the test in an if-statement or while-loop, consider removing
+these parts of your code altogether.
+
+---
+
+For example, instead of:
+```python
+while x % 2 == 0 and x % 2 == 1:
+    ...
+```
+Consider just removing the entire while loop as the body of it will never run.
+
+---
+
+Or, Instead of:
+```python
+if n == 0 and n != 0:
+    do_something(n)
+```
+Consider just removing this if-statement as the body of it will never run.
+'''
+
+[WhileAsFor]
+markup = 'markdown'
+content = '''
+It looks like this while loop could be replaced with a "for ... in range: ..."
+loop.
+
+---
+For example, instead of:
+```python
+x = 0
+while x < 10:
+    # Some code
+    x += 1
+```
+Consider doing:
+```python
+for x in range(10):
+    # some code
+```
+
+---
+
+Or, Instead of:
+```python
+while x > y:
+   # Do something
+   x -= 1
+```
+
+Consider doing:
+```python
+for x in range(x, y, -1):
+    # Do something
+```
+'''
+
+[ForWithRedundantIndexing]
+markup = 'markdown'
+content = '''
+Looks like this `for i in range` loop could be replaced with a
+`for value in iterable` loop.
+This is because the index, `i`, is not being used in the loop to do
+anything other than to index values from the sequence in order.
+
+---
+For example, instead of:
+```python
+for i in range(len(vals)):
+    print(vals[i] * 2)
+```
+Consider doing:
+```python
+for val in vals:
+    print(val * 2)
 ```
 '''

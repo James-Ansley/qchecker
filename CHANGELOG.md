@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0]
+
+### BugFixes
+
+- `RedundantArithmetic` now catches `x - 0` and `x ** 1`
+
+### Changes
+
+- **_New Substructure_** `NoOp` to catch expressions where values are assigned
+  to themselves or augmented assignments do not change the value (e.g. `x += 0`)
+- **_New Substructure_** `Tautology` to catch simple boolean expressions that
+  always evaluate to True (excluding the `True` constant). e.g. `x == x`
+  or `x == 0 or x != 0`
+- **_New Substructure_** `Contradiction` to catch simple boolean expressions
+  that always evaluate to False (excluding the `False` constant).
+  e.g. `x is not x` or `x == 0 and x == 1`
+- **_New Substructure_** `WhileAsFor` to catch while loops that could be easily
+  rewritten as for loops
+- **_New Substructure_** `ForWithRedundantIndexing` to catch `for i in range`
+  loops that can be replaced with for `for value in iterable` loops.
+- Substructure `iter_matches` etc. methods can now take a `parser.CodeModule`
+  object as a parameter. Using a single `CodeModule` for all substructures has
+  been found to improve the run time of this program by 3-4 times for larger
+  code blocks where all substructures are being matched.
+- String parameter to substructure methods is now deprecated.
+- `RedundantNot` description now gives examples of operators such as `not in`
+  which students may be unaware of
+
 ## [1.0.2]
 
 ### Bugfixes
@@ -39,6 +67,8 @@ All notable changes to this project will be documented in this file.
   search code for matches. This affects some substructure `is_present` functions
   too.
 - Deprecation warnings have been removed
+
+[1.1.0]: https://github.com/James-Ansley/qchecker/compare/v1.0.2...v1.1.0
 
 [1.0.2]: https://github.com/James-Ansley/qchecker/compare/v1.0.1...v1.0.2
 

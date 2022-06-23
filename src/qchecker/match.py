@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from qchecker.descriptions import Description
 
-
 __all__ = ['TextRange', 'Match', 'aggregate_match_types']
 
 
@@ -17,9 +16,12 @@ class TextRange:
     Defines the following instance variables:
      - **from_line**: one-indexed start line (inclusive)
      - **from_offset**: zero-indexed start column (inclusive)
-     - **to_line**: one-indexed end line (exclusive)
+     - **to_line**: one-indexed end line (inclusive)
      - **to_offset**: zero-indexed end column (exclusive)
     """
+
+    __slots__ = ['from_line', 'from_offset', 'to_line', 'to_offset']
+
     def __init__(
             self,
             from_line: int,
@@ -44,7 +46,7 @@ class TextRange:
     def grab_range(self, code: str):
         """Copies the dedented range of text from the given code string."""
         lines = code.splitlines()
-        code_range = lines[self.from_line-1:self.to_line]
+        code_range = lines[self.from_line - 1:self.to_line]
         code_range[-1] = code_range[-1][:self.to_offset]
         if not code_range[0][:self.from_offset].isspace():
             code_range[0] = code_range[0][self.from_offset:]
@@ -55,10 +57,14 @@ class TextRange:
                f"->{self.to_line},{self.to_offset})"
 
     def __eq__(self, other):
-        return isinstance(other, TextRange) and self.__dict__ == other.__dict__
+        return (
+                isinstance(other, TextRange)
+                and all(getattr(self, name) == getattr(other, name)
+                        for name in self.__slots__)
+        )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Match:
     """
     Describes a matched substructure in a given piece of code.
