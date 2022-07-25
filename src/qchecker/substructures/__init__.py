@@ -11,6 +11,10 @@ This module also includes two constants:
 
 These tuples cannot be guaranteed to be stable between versions and should not
 be relied on.
+
+A subsets class attribute identifies subset substructures whose matches are
+subsets of other substructures. This attribute has been deprecated since
+version 1.1.1
 """
 
 from inspect import isabstract as _isabstract

@@ -3,7 +3,7 @@ import ast
 from collections.abc import Iterable, Iterator
 
 from libcst import *
-from libcst.metadata import PositionProvider
+from libcst.metadata import PositionProvider, MetadataWrapper
 
 import qchecker.match
 from qchecker.match import TextRange
@@ -26,7 +26,7 @@ class CSTSubstructure(Substructure, abc.ABC):
         if isinstance(code, CodeModule):
             module = code.cst
         else:
-            module = parse_module(code)
+            module = MetadataWrapper(parse_module(code))
         yield from cls._iter_matches(module)
 
     @classmethod

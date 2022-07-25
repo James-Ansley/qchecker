@@ -61,13 +61,20 @@ _COMPLIMENT_OPS |= {v: k for k, v in _COMPLIMENT_OPS.items()}
 
 
 class ASTSubstructure(Substructure, abc.ABC):
+    # TODO - Deprecated, remove in 2.0.0
     subsets: list['ASTSubstructure'] = []
 
     @classmethod
     def iter_matches(cls, code: CodeModule | str) -> Iterator[Match]:
         # All problems in computer science
         # can be solved by another level of indirection.
-        module = code.ast if isinstance(code, CodeModule) else parse(code)
+        if isinstance(code, CodeModule):
+            module = code.ast
+        else:
+            try:
+                module = parse(code)
+            except IndentationError as e:
+                raise SyntaxError from e
         yield from cls._iter_matches(module)
 
     @classmethod
@@ -76,6 +83,11 @@ class ASTSubstructure(Substructure, abc.ABC):
         """Iterates over matches found in the AST"""
 
     @classmethod
+    @deprecated(
+        "subsets can be manually filtered if needed – better to give callers "
+        "control over what substructures they need",
+        version="1.1.1",
+    )
     def _match_collides_with_subset(cls, module, match):
         matches = chain(*(sub_struct._iter_matches(module)
                           for sub_struct in cls.subsets))
@@ -163,6 +175,7 @@ class IfElseAssignReturn(ASTSubstructure):
     # ToDo - Check if/elif*/else?
     name = "If/Else Assign Return"
     technical_description = "If(..)[name=..] Else[name=..], Return name"
+    # TODO - Deprecated, remove in 2.0.0
     subsets = [IfElseAssignBoolReturn]
 
     @classmethod
@@ -189,6 +202,7 @@ class IfElseAssignReturn(ASTSubstructure):
 class IfElseAssignBool(ASTSubstructure):
     name = "If/Else Assign Bool"
     technical_description = "If(..)[name=bool] Else[name=!bool]"
+    # TODO - Deprecated, remove in 2.0.0
     subsets = [IfElseAssignBoolReturn]
 
     @classmethod
@@ -475,12 +489,16 @@ class RedundantFor(ASTSubstructure):
 class NoOp(ASTSubstructure):
     name = 'No Op'
     technical_description = 'name = name | name (+|-)= 0 | name (*|/|**)= 1'
+    # TODO - Deprecated, remove in 2.0.0
+    subsets = [EmptyIfBody, EmptyElseBody]
 
     @classmethod
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, (Assign, AnnAssign)):
             if is_nop(node):
-                yield cls._make_match(node, node)
+                match = cls._make_match(node, node)
+                if not cls._match_collides_with_subset(module, match):
+                    yield match
         for node in nodes_of_class(module, AugAssign):
             match (node.op, node.value):
                 case ((Add(), Constant(0))
@@ -488,7 +506,9 @@ class NoOp(ASTSubstructure):
                       | (Mult(), Constant(1))
                       | (Div(), Constant(1))
                       | (Pow(), Constant(1))):
-                    yield cls._make_match(node, node)
+                    match = cls._make_match(node, node)
+                    if not cls._match_collides_with_subset(module, match):
+                        yield match
 
 
 class Tautology(ASTSubstructure):

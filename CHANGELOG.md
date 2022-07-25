@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1]
+
+### BugFixes
+
+- `IndentationErrors` thrown during AST parsing are now rethrown
+  as `SyntaxErrors`
+- `cst_substructure.iter_matches` now uses metadata wrapper for parsing string
+  arguments to prevent errors when constructing matches in CSTs
+
+### Changes
+
+- `NoOp` is now a subset of `EmptyIfBody` and `EmptyElseBody` and will not match
+  if the noop is part of these patterns
+- Subset substructure functionality is now deprecated and will be removed in the
+  next major version. Substructures can be filtered manually if needed.
+
 ## [1.1.0]
 
 ### BugFixes
@@ -67,6 +83,8 @@ All notable changes to this project will be documented in this file.
   search code for matches. This affects some substructure `is_present` functions
   too.
 - Deprecation warnings have been removed
+
+[1.1.1]: https://github.com/James-Ansley/qchecker/compare/v1.1.0...v1.1.1
 
 [1.1.0]: https://github.com/James-Ansley/qchecker/compare/v1.0.2...v1.1.0
 
