@@ -1,6 +1,7 @@
 from textwrap import dedent
 
 import pytest
+
 from qchecker.match import TextRange
 from qchecker.parser import CodeModule
 from qchecker.substructures import *
@@ -695,7 +696,10 @@ def test_redundant_arithmetic(line: str, should_match: bool):
      ('x != y', False),
      ('x < y', False),
      ('x and not y', False),
-     ('not x and y', False))
+     ('not x and y', False),
+     ('not x < val <= y', False),
+     ('not x > val <= y', False),
+     )
 )
 def test_redundant_not(line, should_match):
     match = next(RedundantNot.iter_matches(CodeModule(line)), None)
@@ -914,6 +918,12 @@ def test_while_as_for():
     while x < y:
         y = 2
         x += 3
+        print('do something')
+    
+    # no match
+    while x < len(y):
+        y.pop()
+        x += 1
         print('do something')
     '''))
     match1, match2 = WhileAsFor.iter_matches(code)

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2]
+
+### BugFixes
+
+- `RedundantNot` now does not match chained comparisons
+- `WhileAsFor` now ignores cases where test names have possibly mutating
+  attribute calls in the while body.
+  [#7](https://github.com/James-Ansley/qchecker/issues/7)
+
 ## [1.1.1]
 
 ### BugFixes
@@ -83,6 +92,8 @@ All notable changes to this project will be documented in this file.
   search code for matches. This affects some substructure `is_present` functions
   too.
 - Deprecation warnings have been removed
+
+[1.1.2]:  https://github.com/James-Ansley/qchecker/compare/v1.1.1...v1.1.2
 
 [1.1.1]: https://github.com/James-Ansley/qchecker/compare/v1.1.0...v1.1.1
 

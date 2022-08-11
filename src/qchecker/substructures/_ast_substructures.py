@@ -1,11 +1,12 @@
 import abc
 from ast import *
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from itertools import chain, combinations
 from typing import Any
 
 from deprecated.sphinx import deprecated
+
 from qchecker.match import Match, TextRange
 from qchecker.parser import CodeModule
 from qchecker.substructures._base import Substructure
@@ -431,7 +432,7 @@ class RedundantNot(ASTSubstructure):
     def _iter_matches(cls, module: Module) -> Iterator[Match]:
         for node in nodes_of_class(module, UnaryOp):
             match node:
-                case UnaryOp(Not(), Compare()):
+                case UnaryOp(Not(), Compare(ops=[_], comparators=[_])):
                     yield cls._make_match(node)
 
 
@@ -582,18 +583,17 @@ class WhileAsFor(ASTSubstructure):
                     test=Compare() as cmp,
                     body=body,
                 ):
-                    test_name_ids = {
-                        n.id for n in nodes_of_class(cmp, Name, excluding=Call)
-                    }
-                    ctx_store = {
-                        n.id for n in nodes_of_class(body, Name)
-                        if isinstance(n.ctx, Store)
-                    }
+                    test_name_ids = {n.id for n in nodes_of_class(cmp, Name)}
+                    possibly_updated = (
+                            {n.id for n in nodes_of_class(body, Name)
+                             if isinstance(n.ctx, Store)}
+                            | {n.id for n in names_with_attribute_calls(body)}
+                    )
                     updated_by_constant = set(names_updated_by_constant(body))
                     if (
-                            len(test_name_ids & ctx_store) == 1
+                            len(test_name_ids & possibly_updated) == 1
                             and len(test_name_ids & updated_by_constant) == 1
-                            and len(ctx_store & updated_by_constant) == 1
+                            and len(possibly_updated & updated_by_constant) == 1
                     ):
                         yield cls._make_match(node)
 
@@ -842,3 +842,10 @@ def all_ctx_are_load(nodes: Iterable[Name | Subscript]):
 
 def all_names_of(node: AST | Iterable[AST], *name_ids: str):
     yield from (n for n in nodes_of_class(node, Name) if n.id in name_ids)
+
+
+def names_with_attribute_calls(body: Iterable[AST]):
+    for node in nodes_of_class(body, Call):
+        match node:
+            case Call(func=Attribute(value=Name() as n)):
+                yield n
